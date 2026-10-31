@@ -251,6 +251,10 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
                         self.locationStatus = "Location unavailable. Unconfirmed time remains unknown."
                         continue
                     }
+                    if !update.stationary, self.archive.active?.stationarySince != nil {
+                        self.updateStationarity(confirmed: false)
+                        guard self.recording else { break }
+                    }
                     if let location = update.location { self.accept(location) }
                     guard self.recording else { break }
                     if update.stationary {

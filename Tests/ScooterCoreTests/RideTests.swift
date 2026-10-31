@@ -192,4 +192,26 @@ struct RideTests {
         #expect(abs(ride.distance - 2) < 0.01)
         #expect(ride.unknownDuration(at: start.addingTimeInterval(6)) == 5)
     }
+
+    @Test func rejectedResumeFixDoesNotExtendConfirmedStop() {
+        var ride = Ride(owner: "watch", startedAt: start)
+        _ = ride.append(point(0), receivedAt: start)
+        ride.confirmStationary(at: start)
+        let resumedAt = start.addingTimeInterval(60)
+        // The stream's non-stationary transition precedes location validation.
+        ride.finishStationary(at: resumedAt)
+        ride.interrupt(at: resumedAt)
+        let rejected = ride.append(point(60, meters: 20, speed: 2, accuracy: 80), receivedAt: resumedAt)
+        #expect(!rejected)
+        #expect(ride.stationarySince == nil)
+        #expect(ride.stoppedTime(at: start.addingTimeInterval(120)) == 60)
+        #expect(ride.unknownDuration(at: start.addingTimeInterval(120)) == 60)
+        let accepted = ride.append(point(120, meters: 100, speed: 2), receivedAt: start.addingTimeInterval(120))
+        #expect(accepted)
+        ride.end(at: start.addingTimeInterval(120))
+        #expect(ride.stoppedDuration == 60)
+        #expect(ride.unknownDuration(at: start) == 60)
+        #expect(ride.movingDuration == 0)
+        #expect(ride.distance == 0)
+    }
 }
