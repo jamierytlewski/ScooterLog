@@ -1,0 +1,90 @@
+name: ScooterLog
+options:
+  bundleIdPrefix: com.scooterlog
+  deploymentTarget:
+    iOS: "27.0"
+    watchOS: "27.0"
+packages:
+  ScooterCore:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    CLOUDKIT_CONTAINER_IDENTIFIER: iCloud.com.scooterlog.app
+    SWIFT_STRICT_CONCURRENCY: complete
+targets:
+  ScooterLog:
+    type: application
+    platform: iOS
+    sources:
+      - App
+      - Shared
+      - LiveActivity/RideActivityAttributes.swift
+    dependencies:
+      - package: ScooterCore
+      - target: ScooterWatch
+        embed: true
+      - target: ScooterLiveActivity
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.scooterlog.app
+        INFOPLIST_FILE: Configuration/Phone-Info.plist
+        CODE_SIGN_ENTITLEMENTS: Configuration/Phone.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        GENERATE_INFOPLIST_FILE: NO
+  ScooterWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - WatchApp
+      - Shared
+    dependencies:
+      - package: ScooterCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.scooterlog.app.watchkitapp
+        INFOPLIST_FILE: Configuration/Watch-Info.plist
+        CODE_SIGN_ENTITLEMENTS: Configuration/Watch.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
+  ScooterLiveActivity:
+    type: app-extension
+    platform: iOS
+    sources:
+      - LiveActivity
+    dependencies:
+      - package: ScooterCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.scooterlog.app.activity
+        INFOPLIST_FILE: Configuration/Activity-Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
+  ScooterLogUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - UITests
+    dependencies:
+      - target: ScooterLog
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.scooterlog.app.uitests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  ScooterLog:
+    build:
+      targets:
+        ScooterLog: all
+    test:
+      targets:
+        - ScooterLogUITests
+  ScooterWatch:
+    build:
+      targets:
+        ScooterWatch: all
