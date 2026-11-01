@@ -27,6 +27,7 @@
 		7A2E31AD595B6917A850C0B3 /* RideController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125F3B5377547197A4F82337 /* RideController.swift */; };
 		8CD36DF6FDD65FD847436093 /* RideDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE329B9BCAD2567197CE3563 /* RideDashboard.swift */; };
 		8F1E7ECFB6A9D4591314765C /* ScooterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0342FAA71038BAA8A73C8291 /* ScooterCore */; };
+		978686B4CAF05FF44F1B3E14 /* AppIcon.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D90EB74057930478B5049668 /* AppIcon.xcassets */; };
 		A210C2B35ABC2E2C5C2BD2C1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9F63D7889E91C10B2633A29D /* Assets.xcassets */; };
 		AE68D403D97C6305E80D1B47 /* RideActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C04A5B1FBA44F1F3D694FE6 /* RideActivityAttributes.swift */; };
 		B6B141054D55A9A520775204 /* HealthReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663A72BAA355B34FD498F326 /* HealthReader.swift */; };
@@ -39,7 +40,10 @@
 		E0A49B0C6A85601BF424AEFB /* RideController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125F3B5377547197A4F82337 /* RideController.swift */; };
 		E4DCEC9393871488B9E396C8 /* ScooterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 415B67494CBA5C9553D7A11C /* ScooterCore */; };
 		E68D994F31FD4BE5CB18AEE6 /* ScooterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4BD326E61FEB5E774D8EDEC1 /* ScooterCore */; };
+		EDBF90D32DE8A5D10C9B9E57 /* PlaceSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D0E5914FBC947D39981CA5 /* PlaceSearch.swift */; };
 		EE21FDBBB9074438762D8060 /* SavedPlacesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67D1D68D312F05ABFFD4392D /* SavedPlacesView.swift */; };
+		F87CC398ED4FCF04DE07EEC3 /* PlaceSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D0E5914FBC947D39981CA5 /* PlaceSearch.swift */; };
+		FEBAD9F815232C66F4B8E9B5 /* AppIcon.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D90EB74057930478B5049668 /* AppIcon.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -99,6 +103,7 @@
 		26D5D84073CE0C8F8AFC4C86 /* ScooterLogApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScooterLogApp.swift; sourceTree = "<group>"; };
 		2B533FDC214299797A5009DC /* jamierytlewski-crispy-eureka */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "jamierytlewski-crispy-eureka"; path = .; sourceTree = SOURCE_ROOT; };
 		33CB0780E7900DDF7FC6235D /* ScooterLiveActivity.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ScooterLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		45D0E5914FBC947D39981CA5 /* PlaceSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceSearch.swift; sourceTree = "<group>"; };
 		562228D553A7F896CAA50606 /* ScooterWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScooterWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C04A5B1FBA44F1F3D694FE6 /* RideActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideActivityAttributes.swift; sourceTree = "<group>"; };
 		663A72BAA355B34FD498F326 /* HealthReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthReader.swift; sourceTree = "<group>"; };
@@ -108,6 +113,7 @@
 		8E672D362BACD28E2DA3CDBF /* CloudRideSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudRideSync.swift; sourceTree = "<group>"; };
 		9F63D7889E91C10B2633A29D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9FEB11418A52807311A182B1 /* ScooterLog.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ScooterLog.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D90EB74057930478B5049668 /* AppIcon.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = AppIcon.xcassets; sourceTree = "<group>"; };
 		DAEB2528B14C3F6E28F641AC /* RideIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideIntents.swift; sourceTree = "<group>"; };
 		E1CD3C35BC8DC3C922316783 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		E8EDF7DC422D08C8FBCFF3FD /* ScooterLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScooterLiveActivity.swift; sourceTree = "<group>"; };
@@ -213,9 +219,11 @@
 		E9346F255A99E11503959F04 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				D90EB74057930478B5049668 /* AppIcon.xcassets */,
 				9F63D7889E91C10B2633A29D /* Assets.xcassets */,
 				11C856AADEC61D32C122D24A /* DirectionsView.swift */,
 				663A72BAA355B34FD498F326 /* HealthReader.swift */,
+				45D0E5914FBC947D39981CA5 /* PlaceSearch.swift */,
 				E1CD3C35BC8DC3C922316783 /* PrivacyInfo.xcprivacy */,
 				125F3B5377547197A4F82337 /* RideController.swift */,
 				FE329B9BCAD2567197CE3563 /* RideDashboard.swift */,
@@ -365,6 +373,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				978686B4CAF05FF44F1B3E14 /* AppIcon.xcassets in Resources */,
 				A210C2B35ABC2E2C5C2BD2C1 /* Assets.xcassets in Resources */,
 				0734437FD0F607BDA31338FB /* PrivacyInfo.xcprivacy in Resources */,
 			);
@@ -374,6 +383,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FEBAD9F815232C66F4B8E9B5 /* AppIcon.xcassets in Resources */,
 				6D8016EF28CF418247BBA4F2 /* Assets.xcassets in Resources */,
 				6E7ACAFE9F3311620CF6540B /* PrivacyInfo.xcprivacy in Resources */,
 			);
@@ -416,6 +426,7 @@
 				C6D72E5F3653271E6868613D /* DirectionsView.swift in Sources */,
 				65E50224F6DFC99FD152F9C6 /* HealthReader.swift in Sources */,
 				37833B82D5DB602D114A29C8 /* LiveActivityManager.swift in Sources */,
+				EDBF90D32DE8A5D10C9B9E57 /* PlaceSearch.swift in Sources */,
 				4F394D61A9C6AC99CA66D43C /* RideActivityAttributes.swift in Sources */,
 				7A2E31AD595B6917A850C0B3 /* RideController.swift in Sources */,
 				8CD36DF6FDD65FD847436093 /* RideDashboard.swift in Sources */,
@@ -432,6 +443,7 @@
 			files = (
 				D653B4131B7319B77B5C8AA9 /* DirectionsView.swift in Sources */,
 				B6B141054D55A9A520775204 /* HealthReader.swift in Sources */,
+				F87CC398ED4FCF04DE07EEC3 /* PlaceSearch.swift in Sources */,
 				E0A49B0C6A85601BF424AEFB /* RideController.swift in Sources */,
 				18A20BFA362C9AC029DCEFBE /* RideDashboard.swift in Sources */,
 				58C4F23D92DDC61AC784EDE6 /* RideIntents.swift in Sources */,
@@ -465,7 +477,7 @@
 		16CCD1E0443F840C1736BA77 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Configuration/Phone.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = NO;
@@ -484,7 +496,7 @@
 		1FF4E963263289B9F8CCD36D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Configuration/Watch.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Configuration/Watch-Info.plist";
@@ -593,7 +605,7 @@
 		33020939049BFB647DBBC113 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Configuration/Watch.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Configuration/Watch-Info.plist";
@@ -709,7 +721,7 @@
 		DD82D7E39094F9171B8217FD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Configuration/Phone.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = NO;

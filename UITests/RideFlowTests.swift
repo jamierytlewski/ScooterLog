@@ -94,34 +94,96 @@ final class RideFlowTests: XCTestCase {
     }
 
     @MainActor
-    func testSearchValidationAndLocationRecovery() throws {
+    func testDirectionsDestinationIsChosenFromSuggestions() throws {
         let app = XCUIApplication()
-        app.launch()
-        reveal(app.buttons["Saved places"], in: app)
-        app.buttons["Saved places"].tap()
-        let search = app.buttons["searchPlaces"]
-        XCTAssertTrue(search.waitForExistence(timeout: 5))
-        XCTAssertFalse(search.isEnabled)
-        let query = app.textFields["placeQuery"]
-        query.tap()
-        query.typeText("   ")
-        XCTAssertFalse(search.isEnabled)
-        query.typeText("Central Park")
-        XCTAssertTrue(search.isEnabled)
-
-        app.terminate()
+        app.launchArguments = ["-ScooterLogStubPlaceSearch"]
         app.launch()
         reveal(app.buttons["Directions"], in: app)
         app.buttons["Directions"].tap()
-        let find = app.buttons["findRoute"]
-        XCTAssertTrue(find.waitForExistence(timeout: 5))
-        XCTAssertFalse(find.isEnabled)
-        app.textFields["destinationQuery"].tap()
-        app.textFields["destinationQuery"].typeText("Central Park")
-        XCTAssertTrue(find.isEnabled)
-        find.tap()
-        XCTAssertTrue(app.staticTexts["Start a ride and wait for an accurate location first."].waitForExistence(timeout: 5))
+        let destination = app.buttons["destinationQuery"]
+        XCTAssertTrue(destination.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["findRoute"].exists, "There is nothing to refresh before a destination is chosen")
+
+        destination.tap()
+        XCTAssertTrue(app.staticTexts["Find a place"].waitForExistence(timeout: 5))
+        let field = app.searchFields.firstMatch
+        field.tap()
+        field.typeText("coffee")
+        let suggestions = app.buttons.matching(identifier: "placeSuggestion")
+        XCTAssertTrue(suggestions.firstMatch.waitForExistence(timeout: 5), "Suggestions should appear while typing")
+        capture("Place suggestions")
+        suggestions.firstMatch.tap()
+
+        let results = app.buttons.matching(identifier: "placeResult")
+        XCTAssertTrue(results.element(boundBy: 1).waitForExistence(timeout: 5), "A broad suggestion lists its places to pick from")
+        XCTAssertEqual(results.count, 2)
+        capture("Place results")
+        results.element(boundBy: 0).tap()
+
+        XCTAssertTrue(app.buttons["findRoute"].waitForExistence(timeout: 5))
+        XCTAssertTrue(destination.label.contains("Blue Bottle Coffee"), "Chosen destination is shown: \(destination.label)")
+        XCTAssertTrue(app.staticTexts["Start a ride and wait for an accurate location first."].exists)
         capture("Directions location recovery")
+    }
+
+    @MainActor
+    func testSavedPlaceIsFoundFromSuggestionsAndNamed() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ScooterLogStubPlaceSearch"]
+        app.launch()
+        reveal(app.buttons["Saved places"], in: app)
+        app.buttons["Saved places"].tap()
+        let add = app.buttons["addPlace"]
+        reveal(add, in: app)
+        add.tap()
+        XCTAssertTrue(app.staticTexts["Find a place"].waitForExistence(timeout: 5))
+
+        let field = app.searchFields.firstMatch
+        field.tap()
+        field.typeText("cen")
+        let suggestions = app.buttons.matching(identifier: "placeSuggestion")
+        XCTAssertTrue(suggestions.element(boundBy: 2).waitForExistence(timeout: 5), "Suggestions should appear while typing")
+        capture("Suggestions while typing")
+        suggestions.element(boundBy: 0).tap()
+
+        let alert = app.alerts["Name this place"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        let nameField = alert.textFields.firstMatch
+        XCTAssertEqual(nameField.value as? String, "Central Park", "The chosen place pre-fills its name")
+        let name = "UITest \(Int(Date().timeIntervalSince1970))"
+        replaceText(in: nameField, with: name)
+        // The alert rises when its keyboard appears, so let it settle before aiming at Save.
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        waitUntilStill(alert)
+        capture("Name this place")
+        alert.buttons["Save"].tap()
+
+        XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout: 5))
+        app.buttons["Actions for \(name)"].tap()
+        app.buttons["Delete"].tap()
+        try confirm("Delete saved place?", with: "Delete place", in: app)
+        waitUntilGone(app.staticTexts[name])
+    }
+
+    @MainActor
+    func testPlaceSearchFailureOffersRetryAndRecovers() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ScooterLogStubPlaceSearch"]
+        app.launch()
+        reveal(app.buttons["Directions"], in: app)
+        app.buttons["Directions"].tap()
+        app.buttons["destinationQuery"].tap()
+        let field = app.searchFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("offline")
+        XCTAssertTrue(app.staticTexts["Search unavailable"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Try again"].exists)
+        capture("Place search unavailable")
+
+        replaceText(in: field, with: "cen")
+        XCTAssertTrue(app.buttons.matching(identifier: "placeSuggestion").firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Search unavailable"].exists)
     }
 
     @MainActor
@@ -169,12 +231,257 @@ final class RideFlowTests: XCTestCase {
     }
 
     @MainActor
-    private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
+    func testSwipeDeleteConfirmsThenRemovesOnlyThatRide() throws {
+        let app = XCUIApplication()
+        app.launch()
+        try clearHistory(in: app)
+        // Different durations make the two rides tell apart in the list.
+        try recordRide(in: app, lasting: 4)
+        try recordRide(in: app)
+        openHistory(in: app)
+        let rows = rideRows(in: app)
+        XCTAssertTrue(waitForCount(rows, 2), "Found \(rows.count) rides")
+        let labels = rows.allElementsBoundByIndex.map { $0.label }
+        XCTAssertEqual(Set(labels).count, 2, "Rides should tell apart: \(labels)")
+
+        let newest = app.cells.containing(NSPredicate(format: "identifier == %@", "rideRow")).element(boundBy: 0)
+        newest.swipeLeft()
+        app.buttons["Delete"].tap()
+        XCTAssertTrue(confirmationDialog("Delete this ride?", in: app).waitForExistence(timeout: 5))
+        capture("Swipe delete confirmation")
+        dismissConfirmation("Delete this ride?", in: app)
+        XCTAssertTrue(waitForCount(rows, 2), "Dismissing the confirmation must not delete a ride")
+
+        if !app.buttons["Delete"].exists { newest.swipeLeft() }
+        app.buttons["Delete"].tap()
+        try confirm("Delete this ride?", with: "Delete ride", in: app)
+        XCTAssertTrue(waitForCount(rows, 1), "Found \(rows.count) rides")
+        XCTAssertEqual(rows.firstMatch.label, labels[1], "Only the swiped ride is removed")
+
+        app.terminate()
+        app.launch()
+        openHistory(in: app)
+        XCTAssertTrue(waitForCount(rows, 1), "Found \(rows.count) rides after relaunch")
+        XCTAssertEqual(rows.firstMatch.label, labels[1])
+    }
+
+    @MainActor
+    func testSelectAndDeleteSeveralRides() throws {
+        let app = XCUIApplication()
+        app.launch()
+        try clearHistory(in: app)
+        try recordRide(in: app)
+        try recordRide(in: app)
+        openHistory(in: app)
+        let rows = rideRows(in: app)
+        XCTAssertTrue(waitForCount(rows, 2), "Found \(rows.count) rides")
+
+        let select = app.buttons["selectRides"]
+        select.tap()
+        XCTAssertEqual(select.label, "Done")
+        let delete = app.buttons["deleteSelectedRides"]
+        let selectAll = app.buttons["selectAllRides"]
+        XCTAssertTrue(delete.waitForExistence(timeout: 5))
+        XCTAssertFalse(delete.isEnabled, "Nothing is selected yet")
+        capture("History selecting")
+        // The audit mis-measures text on the system's glass toolbar capsules: the tint reads about 6:1 against
+        // them, and a disabled button is exempt from contrast rules. Those controls are skipped; all else is audited.
+        let glassToolbarControls: Set<String> = ["selectRides", "selectAllRides", "deleteSelectedRides"]
+        try app.performAccessibilityAudit(for: [.contrast, .hitRegion]) { issue in
+            glassToolbarControls.contains(issue.element?.identifier ?? "")
+        }
+
+        rows.element(boundBy: 0).tap()
+        XCTAssertEqual(delete.label, "Delete (1)")
+        selectAll.tap()
+        XCTAssertEqual(delete.label, "Delete (2)")
+        XCTAssertEqual(selectAll.label, "Deselect all")
+        selectAll.tap()
+        XCTAssertFalse(delete.isEnabled)
+        selectAll.tap()
+
+        delete.tap()
+        XCTAssertTrue(confirmationDialog("Delete 2 rides?", in: app).waitForExistence(timeout: 5))
+        capture("Bulk delete confirmation")
+        dismissConfirmation("Delete 2 rides?", in: app)
+        XCTAssertTrue(waitForCount(rows, 2), "Dismissing the confirmation must not delete a ride")
+        XCTAssertEqual(delete.label, "Delete (2)", "Dismissing the confirmation must not change the selection")
+
+        delete.tap()
+        try confirm("Delete 2 rides?", with: "Delete 2 rides", in: app)
+        XCTAssertTrue(app.staticTexts["No saved rides"].waitForExistence(timeout: 5))
+        waitUntilGone(app.buttons["selectRides"])
+        capture("History empty")
+
+        app.terminate()
+        app.launch()
+        openHistory(in: app)
+        XCTAssertTrue(app.staticTexts["No saved rides"].waitForExistence(timeout: 5), "The deletion survives a relaunch")
+    }
+
+    @MainActor
+    func testDeleteFromRideDetail() throws {
+        let app = XCUIApplication()
+        app.launch()
+        try clearHistory(in: app)
+        try recordRide(in: app)
+        openHistory(in: app)
+        let row = rideRows(in: app).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+
+        let trash = app.buttons["deleteRide"]
+        XCTAssertTrue(trash.waitForExistence(timeout: 5))
+        trash.tap()
+        XCTAssertTrue(confirmationDialog("Delete this ride?", in: app).waitForExistence(timeout: 5))
+        capture("Ride detail delete confirmation")
+        dismissConfirmation("Delete this ride?", in: app)
+        XCTAssertTrue(trash.exists, "Dismissing the confirmation keeps the ride open")
+
+        trash.tap()
+        try confirm("Delete this ride?", with: "Delete ride", in: app)
+        XCTAssertTrue(app.staticTexts["No saved rides"].waitForExistence(timeout: 5), "Deleting a ride returns to History")
+        XCTAssertFalse(trash.exists)
+    }
+
+    @MainActor
+    func testSelectionToolbarFitsLargestDynamicType() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+        try clearHistory(in: app)
+        try recordRide(in: app)
+        openHistory(in: app)
+        app.buttons["selectRides"].tap()
+        let selectAll = app.buttons["selectAllRides"]
+        let delete = app.buttons["deleteSelectedRides"]
+        XCTAssertTrue(delete.waitForExistence(timeout: 5))
+        selectAll.tap()
+        capture("Largest Dynamic Type history selecting")
+        for control in [selectAll, delete] {
+            XCTAssertGreaterThanOrEqual(control.frame.height, 28, "\(control)")
+            XCTAssertGreaterThanOrEqual(control.frame.minX, app.frame.minX, "\(control)")
+            XCTAssertLessThanOrEqual(control.frame.maxX, app.frame.maxX, "\(control)")
+        }
+        XCTAssertLessThanOrEqual(selectAll.frame.maxX, delete.frame.minX, "The two toolbar buttons must not overlap")
+
+        // The toolbar floats over the oversized card, so using the button is the real proof that it is reachable.
+        delete.tap()
+        XCTAssertTrue(confirmationDialog("Delete this ride?", in: app).waitForExistence(timeout: 5))
+        dismissConfirmation("Delete this ride?", in: app)
+    }
+
+    @MainActor
+    private func openHistory(in app: XCUIApplication) {
+        reveal(app.buttons["Ride history"], in: app)
+        app.buttons["Ride history"].tap()
+        XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    private func recordRide(in app: XCUIApplication, lasting seconds: UInt32 = 0) throws {
+        let start = app.buttons["Start ride here"]
+        // A large Dynamic Type dashboard keeps its scroll position after History, so the button can be off-screen.
+        if !start.waitForExistence(timeout: 5) { reveal(start, in: app, towardTop: true) }
+        start.tap()
+        let end = app.buttons["End ride"]
+        XCTAssertTrue(end.waitForExistence(timeout: 5))
+        sleep(seconds)
+        end.tap()
+        try XCTUnwrap(app.buttons.matching(identifier: "End ride").allElementsBoundByIndex.last).tap()
+        waitUntilGone(app.buttons["End ride"])
+    }
+
+    @MainActor
+    private func rideRows(in app: XCUIApplication) -> XCUIElementQuery {
+        app.descendants(matching: .any).matching(identifier: "rideRow")
+    }
+
+    /// Deletes every saved ride through the UI, then returns to the dashboard, so a test can count the rides it records.
+    @MainActor
+    private func clearHistory(in app: XCUIApplication) throws {
+        openHistory(in: app)
+        if app.buttons["selectRides"].waitForExistence(timeout: 2) {
+            app.buttons["selectRides"].tap()
+            app.buttons["selectAllRides"].tap()
+            let delete = app.buttons["deleteSelectedRides"]
+            let count = Int(delete.label.filter(\.isNumber)) ?? 0
+            delete.tap()
+            try confirm(count == 1 ? "Delete this ride?" : "Delete \(count) rides?",
+                        with: count == 1 ? "Delete ride" : "Delete \(count) rides", in: app)
+        }
+        XCTAssertTrue(waitForCount(rideRows(in: app), 0), "History should be empty")
+        waitUntilGone(app.buttons["selectRides"])
+        app.navigationBars["History"].buttons.element(boundBy: 0).tap()
+    }
+
+    @MainActor
+    private func confirmationDialog(_ title: String, in app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", title)).firstMatch
+    }
+
+    @MainActor
+    private func confirm(_ title: String, with action: String, in app: XCUIApplication) throws {
+        let dialog = confirmationDialog(title, in: app)
+        XCTAssertTrue(dialog.waitForExistence(timeout: 5), "Missing confirmation “\(title)”")
+        // Last match: ride detail keeps a toolbar button with the same label beneath the dialog.
+        try XCTUnwrap(app.buttons.matching(NSPredicate(format: "label == %@", action)).allElementsBoundByIndex.last).tap()
+        waitUntilGone(dialog)
+    }
+
+    @MainActor
+    private func dismissConfirmation(_ title: String, in app: XCUIApplication) {
+        let dialog = confirmationDialog(title, in: app)
+        XCTAssertTrue(dialog.exists)
+        if app.buttons["Cancel"].exists {
+            app.buttons["Cancel"].tap()
+        } else {
+            // An iPhone popover has no Cancel button; a tap outside it dismisses it. The screen's left margin is
+            // clear of list rows, because the tap can also reach the content below.
+            app.otherElements["PopoverDismissRegion"].firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5)).tap()
+        }
+        waitUntilGone(dialog)
+    }
+
+    @MainActor
+    private func waitUntilGone(_ element: XCUIElement, timeout: TimeInterval = 5, file: StaticString = #filePath, line: UInt = #line) {
+        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: element)
+        XCTAssertEqual(XCTWaiter.wait(for: [gone], timeout: timeout), .completed, "\(element) never disappeared", file: file, line: line)
+    }
+
+    @MainActor
+    private func waitForCount(_ query: XCUIElementQuery, _ expected: Int, timeout: TimeInterval = 5) -> Bool {
+        let deadline = Date.now.addingTimeInterval(timeout)
+        while query.count != expected, Date.now < deadline { Thread.sleep(forTimeInterval: 0.2) }
+        return query.count == expected
+    }
+
+    @MainActor
+    private func replaceText(in field: XCUIElement, with text: String) {
+        let current = (field.value as? String) ?? ""
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count) + text)
+    }
+
+    @MainActor
+    private func reveal(_ element: XCUIElement, in app: XCUIApplication, towardTop: Bool = false) {
         for _ in 0..<8 {
             if element.isHittable { return }
-            app.swipeUp()
+            if towardTop { app.swipeDown() } else { app.swipeUp() }
         }
         XCTAssertTrue(element.isHittable)
+    }
+
+    /// Waits for an element to stop moving, such as an alert that rises when its keyboard appears.
+    @MainActor
+    private func waitUntilStill(_ element: XCUIElement, for duration: TimeInterval = 0.6, timeout: TimeInterval = 5) {
+        var last = element.frame
+        var stableSince = Date.now
+        let deadline = Date.now.addingTimeInterval(timeout)
+        while Date.now < deadline, Date.now.timeIntervalSince(stableSince) < duration {
+            Thread.sleep(forTimeInterval: 0.1)
+            let current = element.frame
+            if current != last { last = current; stableSince = Date.now }
+        }
     }
 
     @MainActor
