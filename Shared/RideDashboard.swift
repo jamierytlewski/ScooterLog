@@ -295,11 +295,15 @@ struct RideDashboard: View {
 
     @ViewBuilder private var controls: some View {
         if controller.displayedRide == nil {
-            Button { controller.perform { try controller.start() } } label: {
-                actionLabel("Start ride here", systemImage: "play.fill")
+#if os(watchOS)
+            HStack {
+                Spacer(minLength: 0)
+                startRideButton
+                Spacer(minLength: 0)
             }
-            .buttonStyle(.borderedProminent)
-            .foregroundStyle(Color("OnRideAccent"))
+#else
+            startRideButton
+#endif
         } else {
             if !controller.isRemote && !controller.recording {
                 Button { controller.perform { try controller.start() } } label: {
@@ -316,13 +320,29 @@ struct RideDashboard: View {
         }
     }
 
-    private func actionLabel(_ title: LocalizedStringKey, systemImage: String) -> some View {
+    private var startRideButton: some View {
+        Button { controller.perform { try controller.start() } } label: {
+#if os(watchOS)
+            actionLabel("Start ride here", systemImage: "play.fill", fillsWidth: false)
+#else
+            actionLabel("Start ride here", systemImage: "play.fill")
+#endif
+        }
+        .buttonStyle(.borderedProminent)
+        .foregroundStyle(Color("OnRideAccent"))
+    }
+
+    private func actionLabel(
+        _ title: LocalizedStringKey,
+        systemImage: String,
+        fillsWidth: Bool = true
+    ) -> some View {
         Label {
             Text(title).fixedSize(horizontal: false, vertical: true)
         } icon: {
             Image(systemName: systemImage)
         }
-        .frame(maxWidth: .infinity, minHeight: 44)
+        .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: 44)
     }
 
     private var healthSection: some View {
