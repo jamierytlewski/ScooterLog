@@ -808,7 +808,6 @@ private struct TurnByTurnView: View {
     @ObservedObject var model: DirectionsModel
     @ObservedObject var controller: RideController
     @Binding var voiceGuidance: Bool
-    @Environment(\.dismiss) private var dismiss
     @State private var camera = MapCameraPosition.automatic
     @State private var confirmEndRide = false
 
@@ -895,14 +894,12 @@ private struct TurnByTurnView: View {
                             .accessibilityIdentifier("endRideAndDirections")
                             Button("Stop directions (keep ride recording)") {
                                 model.stopGuidance()
-                                dismiss()
                             }
                             .frame(maxWidth: .infinity, minHeight: 44)
                             .accessibilityIdentifier("stopDirectionsKeepRide")
                         } else {
                             Button("Stop directions") {
                                 model.stopGuidance()
-                                dismiss()
                             }
                             .frame(maxWidth: .infinity, minHeight: 44)
                             .accessibilityIdentifier("endNavigation")
@@ -937,7 +934,6 @@ private struct TurnByTurnView: View {
                 do {
                     try controller.end()
                     model.stopGuidance()
-                    dismiss()
                 } catch {
                     model.reportGuidanceError("Couldn't end the ride: \(error.localizedDescription)")
                 }
