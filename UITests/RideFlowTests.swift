@@ -96,7 +96,7 @@ final class RideFlowTests: XCTestCase {
     @MainActor
     func testDirectionsDestinationIsChosenFromSuggestions() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ScooterLogStubPlaceSearch"]
+        app.launchArguments = ["-ScooterLogStubPlaceSearch", "-ScooterLogStubDirections"]
         app.launch()
         reveal(app.buttons["Directions"], in: app)
         app.buttons["Directions"].tap()
@@ -122,14 +122,180 @@ final class RideFlowTests: XCTestCase {
 
         XCTAssertTrue(app.buttons["findRoute"].waitForExistence(timeout: 5))
         XCTAssertTrue(destination.label.contains("Blue Bottle Coffee"), "Chosen destination is shown: \(destination.label)")
-        XCTAssertTrue(app.staticTexts["Start a ride and wait for an accurate location first."].exists)
-        capture("Directions location recovery")
+        let preview = app.descendants(matching: .any)["routePreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 5), "Routes are previewed without starting a ride")
+        let options = app.buttons.matching(identifier: "routeOption")
+        reveal(options.element(boundBy: 1), in: app)
+        XCTAssertEqual(options.count, 2)
+        XCTAssertTrue(options.element(boundBy: 0).label.contains("cycling"))
+        capture("Directions route preview")
+        reveal(options.element(boundBy: 1), in: app)
+        options.element(boundBy: 1).tap()
+        let energy = app.staticTexts["scooterEnergy"]
+        reveal(energy, in: app)
+        XCTAssertTrue(energy.label.contains("13.2") && energy.label.contains("22.9"), energy.label)
+        let time = app.staticTexts["scooterDuration"]
+        XCTAssertTrue(time.label.contains("4 min"), time.label)
+        capture("F3 travel and energy estimates")
+        let next = app.buttons["Next direction"]
+        reveal(next, in: app)
+        next.tap()
+        XCTAssertTrue(app.staticTexts["Step 2 of 2"].exists)
+        let mode = app.buttons["routeMode"]
+        reveal(mode, in: app, towardTop: true)
+        mode.tap()
+        app.buttons["Walking"].tap()
+        reveal(options.firstMatch, in: app)
+        XCTAssertTrue(options.firstMatch.label.contains("walking"), options.firstMatch.label)
+        let back = app.buttons["Previous direction"]
+        reveal(back, in: app)
+        XCTAssertFalse(back.isEnabled, "A new travel mode resets manual directions")
+        app.navigationBars["Directions"].buttons.firstMatch.tap()
+        reveal(app.buttons["Start ride here"], in: app)
+        XCTAssertTrue(app.buttons["Start ride here"].exists, "Planning must not start GPS recording")
+    }
+
+    @MainActor
+    func testDirectionsDeniedLocationCanPlanFromChosenOrigin() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ScooterLogStubPlaceSearch", "-ScooterLogStubDirections", "-ScooterLogStubLocationDenied"]
+        app.launch()
+        reveal(app.buttons["Directions"], in: app)
+        app.buttons["Directions"].tap()
+        app.buttons["destinationQuery"].tap()
+        let field = app.searchFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("cen")
+        let suggestions = app.buttons.matching(identifier: "placeSuggestion")
+        XCTAssertTrue(suggestions.firstMatch.waitForExistence(timeout: 5))
+        suggestions.firstMatch.tap()
+        let status = app.staticTexts["directionsStatus"]
+        XCTAssertTrue(status.waitForExistence(timeout: 5))
+        XCTAssertTrue(status.label.contains("Choose a starting point"), status.label)
+        XCTAssertFalse(app.buttons.matching(identifier: "routeOption").firstMatch.exists)
+        let origin = app.buttons["originQuery"]
+        reveal(origin, in: app)
+        origin.tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("cen")
+        XCTAssertTrue(suggestions.element(boundBy: 2).waitForExistence(timeout: 5))
+        suggestions.element(boundBy: 2).tap()
+        let options = app.buttons.matching(identifier: "routeOption")
+        reveal(options.firstMatch, in: app)
+        XCTAssertTrue(options.firstMatch.waitForExistence(timeout: 5), "A chosen origin bypasses location permission")
+        reveal(origin, in: app, towardTop: true)
+        XCTAssertTrue(origin.label.contains("Central Station"), origin.label)
+    }
+
+    @MainActor
+    func testDirectionsNetworkFailureHasNoStaleRoute() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ScooterLogStubPlaceSearch", "-ScooterLogStubDirections", "-ScooterLogStubRouteFailure"]
+        app.launch()
+        reveal(app.buttons["Directions"], in: app)
+        app.buttons["Directions"].tap()
+        app.buttons["destinationQuery"].tap()
+        let field = app.searchFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("cen")
+        let suggestion = app.buttons.matching(identifier: "placeSuggestion").firstMatch
+        XCTAssertTrue(suggestion.waitForExistence(timeout: 5))
+        suggestion.tap()
+        let status = app.staticTexts["directionsStatus"]
+        XCTAssertTrue(status.waitForExistence(timeout: 5))
+        XCTAssertTrue(status.label.contains("Directions unavailable:"), status.label)
+        XCTAssertTrue(app.buttons["findRoute"].isEnabled)
+        XCTAssertFalse(app.buttons.matching(identifier: "routeOption").firstMatch.exists)
+        XCTAssertFalse(app.staticTexts["scooterEnergy"].exists)
+    }
+
+    @MainActor
+    func testTurnByTurnStartsRideAdvancesAndAutomaticallyReroutes() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ScooterLogStubPlaceSearch", "-ScooterLogStubDirections", "-ScooterLogStubNavigation"]
+        app.launch()
+        reveal(app.buttons["Directions"], in: app)
+        app.buttons["Directions"].tap()
+        app.buttons["destinationQuery"].tap()
+        let field = app.searchFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("cen")
+        let suggestion = app.buttons.matching(identifier: "placeSuggestion").firstMatch
+        XCTAssertTrue(suggestion.waitForExistence(timeout: 5))
+        suggestion.tap()
+
+        let start = app.buttons["startTurnByTurn"]
+        reveal(start, in: app)
+        XCTAssertTrue(start.label.contains("Start ride & turn-by-turn"), start.label)
+        start.tap()
+        XCTAssertTrue(app.otherElements["liveRouteMap"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Head toward Park path"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["endRideAndDirections"].exists, "Guidance starts a ride and offers to end both together")
+
+        app.buttons["simulateTurn"].tap()
+        XCTAssertTrue(app.staticTexts["Continue to your destination"].waitForExistence(timeout: 5),
+                      "Location on the next route segment advances the instruction")
+        app.buttons["simulateDetour"].tap()
+        XCTAssertTrue(app.staticTexts["Head toward Recalculated route"].waitForExistence(timeout: 10),
+                      "A sustained off-route position automatically recalculates from the current location")
+        XCTAssertFalse(app.staticTexts["offRouteWarning"].exists, "A successful reroute resumes guidance")
+        capture("Turn-by-turn reroute")
+
+        app.buttons["endRideAndDirections"].tap()
+        try confirm("End this ride and save it?", with: "End ride and save", in: app)
+        app.navigationBars["Directions"].buttons.firstMatch.tap()
+        XCTAssertTrue(app.buttons["Start ride here"].waitForExistence(timeout: 5),
+                      "Ending navigation also ends the ride started with it")
+    }
+
+    @MainActor
+    func testAutomaticRerouteFailureOffersManualRetry() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ScooterLogStubPlaceSearch", "-ScooterLogStubDirections",
+            "-ScooterLogStubNavigation", "-ScooterLogStubRerouteFailure"
+        ]
+        app.launch()
+        reveal(app.buttons["Directions"], in: app)
+        app.buttons["Directions"].tap()
+        app.buttons["destinationQuery"].tap()
+        let field = app.searchFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("cen")
+        let suggestion = app.buttons.matching(identifier: "placeSuggestion").firstMatch
+        XCTAssertTrue(suggestion.waitForExistence(timeout: 5))
+        suggestion.tap()
+        let start = app.buttons["startTurnByTurn"]
+        reveal(start, in: app)
+        start.tap()
+        XCTAssertTrue(app.buttons["simulateDetour"].waitForExistence(timeout: 5))
+
+        app.buttons["simulateDetour"].tap()
+        let warning = app.staticTexts["offRouteWarning"]
+        XCTAssertTrue(warning.waitForExistence(timeout: 5))
+        XCTAssertTrue(warning.label.contains("Couldn't find a new route"), warning.label)
+        XCTAssertFalse(app.staticTexts["currentManeuver"].exists,
+                       "Do not present stale turn instructions while off route")
+        let retry = app.buttons["recalculateRoute"]
+        XCTAssertTrue(retry.isEnabled)
+        retry.tap()
+        XCTAssertTrue(warning.waitForExistence(timeout: 5))
+
+        app.buttons["endRideAndDirections"].tap()
+        try confirm("End this ride and save it?", with: "End ride and save", in: app)
+        app.navigationBars["Directions"].buttons.firstMatch.tap()
+        XCTAssertTrue(app.buttons["Start ride here"].waitForExistence(timeout: 5))
     }
 
     @MainActor
     func testSavedPlaceIsFoundFromSuggestionsAndNamed() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ScooterLogStubPlaceSearch"]
+        app.launchArguments = ["-ScooterLogStubPlaceSearch", "-ScooterLogStubDirections"]
         app.launch()
         reveal(app.buttons["Saved places"], in: app)
         app.buttons["Saved places"].tap()
@@ -159,6 +325,19 @@ final class RideFlowTests: XCTestCase {
         alert.buttons["Save"].tap()
 
         XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout: 5))
+        app.navigationBars["Saved places"].buttons.firstMatch.tap()
+        reveal(app.buttons["Directions"], in: app)
+        app.buttons["Directions"].tap()
+        let savedDestination = app.buttons["Directions to \(name)"]
+        reveal(savedDestination, in: app)
+        savedDestination.tap()
+        let options = app.buttons.matching(identifier: "routeOption")
+        reveal(options.firstMatch, in: app)
+        XCTAssertTrue(options.firstMatch.waitForExistence(timeout: 5), "Saved addresses can preview routes before a ride")
+        app.navigationBars["Directions"].buttons.firstMatch.tap()
+        reveal(app.buttons["Saved places"], in: app)
+        app.buttons["Saved places"].tap()
+        reveal(app.staticTexts[name], in: app)
         app.buttons["Actions for \(name)"].tap()
         app.buttons["Delete"].tap()
         try confirm("Delete saved place?", with: "Delete place", in: app)

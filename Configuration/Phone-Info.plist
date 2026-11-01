@@ -12,7 +12,7 @@
 <key>LSRequiresIPhoneOS</key><true/>
 <key>UILaunchScreen</key><dict/>
 <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
-<key>NSLocationWhenInUseUsageDescription</key><string>ScooterLog records your route and ride timing when you start a ride.</string>
+<key>NSLocationWhenInUseUsageDescription</key><string>ScooterLog uses your current location to plan directions and records your route and timing only when you start a ride.</string>
 <key>NSHealthShareUsageDescription</key><string>Optionally show available heart-rate samples during your ride. No workouts or health data are written.</string>
 <key>UIBackgroundModes</key><array><string>location</string></array>
 <key>NSSupportsLiveActivities</key><true/>
