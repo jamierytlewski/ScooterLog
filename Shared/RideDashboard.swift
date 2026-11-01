@@ -393,47 +393,217 @@ struct RideMetric: View {
     }
 }
 
-struct HistoryView: View {
+enum RideDeletion {
+    static func title(_ count: Int) -> String { count == 1 ? "Delete this ride?" : "Delete \(count) rides?" }
+    static func action(_ count: Int) -> String { count == 1 ? "Delete ride" : "Delete \(count) rides" }
+
+    static var message: String {
+        #if os(iOS)
+        "This can't be undone. Deleted rides are also removed from your paired Apple Watch and, if iCloud sync is on, from iCloud at your next sync."
+        #else
+        "This can't be undone. Deleted rides are also removed from your paired iPhone."
+        #endif
+    }
+}
+
+extension View {
+    /// Confirms an irreversible ride deletion. Attach it to the control that starts the deletion so the dialog appears next to it.
+    func rideDeletionConfirmation(isPresented: Binding<Bool>, count: Int, delete: @escaping () -> Void) -> some View {
+        confirmationDialog(RideDeletion.title(count), isPresented: isPresented, titleVisibility: .visible) {
+            Button(RideDeletion.action(count), role: .destructive, action: delete)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(RideDeletion.message)
+        }
+    }
+}
+
+struct AttentionSection: View {
     @ObservedObject var controller: RideController
 
     var body: some View {
-        List {
-            if controller.archive.completed.isEmpty {
-                ContentUnavailableView {
-                    Label("No saved rides", systemImage: "clock.arrow.circlepath")
-                } description: {
-                    Text("Completed rides will appear here, including companion rides after sync.")
-                }
-            }
-            ForEach(controller.archive.completed) { ride in
-                NavigationLink {
-                    RideDetail(ride: ride)
-                } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(ride.startedAt, format: .dateTime.month().day().hour().minute())
-                        Text("\(RideFormat.distance(ride.distance)) • \(RideFormat.duration(ride.elapsed(at: .now)))")
-                            .font(.subheadline).foregroundStyle(RideTheme.secondaryText)
-                    }
+        if let message = controller.errorMessage {
+            Section {
+                Label(message, systemImage: "exclamationmark.triangle")
                     .fixedSize(horizontal: false, vertical: true)
+                Button("Dismiss message") { controller.errorMessage = nil }
+            } header: {
+                Text("Needs attention").foregroundStyle(RideTheme.secondaryText)
+            }
+        }
+    }
+}
+
+struct HistoryView: View {
+    @ObservedObject var controller: RideController
+    @State private var rowDeletion: UUID?
+    #if os(iOS)
+    @State private var editMode: EditMode = .inactive
+    @State private var selection: Set<UUID> = []
+    @State private var confirmSelectionDeletion = false
+    #endif
+
+    private var rideIDs: Set<UUID> { Set(controller.archive.completed.map(\.id)) }
+
+    var body: some View {
+        list
+            .navigationTitle("History")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if !controller.archive.completed.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(editMode.isEditing ? "Done" : "Select") { setEditing(!editMode.isEditing) }
+                            .accessibilityIdentifier("selectRides")
+                    }
+                }
+                if editMode.isEditing {
+                    ToolbarItemGroup(placement: .bottomBar) {
+                        Button(allSelected ? "Deselect all" : "Select all") {
+                            selection = allSelected ? [] : rideIDs
+                        }
+                        .accessibilityIdentifier("selectAllRides")
+                        Spacer()
+                        Button(selectedIDs.isEmpty ? "Delete" : "Delete (\(selectedIDs.count))", role: .destructive) {
+                            confirmSelectionDeletion = true
+                        }
+                        .disabled(selectedIDs.isEmpty)
+                        .rideDeletionConfirmation(isPresented: $confirmSelectionDeletion, count: selectedIDs.count) {
+                            if delete(selectedIDs) { setEditing(false) }
+                        }
+                        .accessibilityIdentifier("deleteSelectedRides")
+                    }
                 }
             }
+            .environment(\.editMode, $editMode)
+            .onChange(of: rideIDs) { _, ids in
+                selection.formIntersection(ids)
+                if ids.isEmpty { editMode = .inactive }
+            }
+            #endif
+    }
+
+    @ViewBuilder private var list: some View {
+        #if os(iOS)
+        List(selection: $selection) { rows }
+        #else
+        List { rows }
+        #endif
+    }
+
+    @ViewBuilder private var rows: some View {
+        AttentionSection(controller: controller)
+        if controller.archive.completed.isEmpty {
+            ContentUnavailableView {
+                Label("No saved rides", systemImage: "clock.arrow.circlepath")
+            } description: {
+                Text("Completed rides will appear here, including companion rides after sync.")
+            }
+        }
+        ForEach(controller.archive.completed) { ride in
+            row(for: ride)
+                .accessibilityIdentifier("rideRow")
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    // Not `.destructive`: that role animates the row away and drops a dialog attached to it.
+                    Button("Delete", systemImage: "trash") { rowDeletion = ride.id }
+                        .tint(.red)
+                }
+                #if os(iOS)
+                .contextMenu {
+                    Button("Delete", systemImage: "trash", role: .destructive) { rowDeletion = ride.id }
+                }
+                #endif
+                .rideDeletionConfirmation(isPresented: rowDeletionBinding(for: ride.id), count: 1) {
+                    delete([ride.id])
+                }
+        }
+        if !isEditing {
             Section {
                 Button("Resend saved rides to companion") { controller.resendHistory() }
                     .disabled(controller.archive.completed.isEmpty)
             }
         }
-        .navigationTitle("History")
+    }
+
+    private var isEditing: Bool {
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
+        editMode.isEditing
+        #else
+        false
         #endif
+    }
+
+    @ViewBuilder private func row(for ride: Ride) -> some View {
+        if isEditing {
+            // A link renders dimmed while selecting, which reads as disabled.
+            RideRow(ride: ride)
+        } else {
+            NavigationLink {
+                RideDetail(ride: ride, controller: controller)
+            } label: {
+                RideRow(ride: ride)
+            }
+        }
+    }
+
+    private func rowDeletionBinding(for id: UUID) -> Binding<Bool> {
+        Binding(
+            get: { rowDeletion == id },
+            set: { if !$0 && rowDeletion == id { rowDeletion = nil } }
+        )
+    }
+
+    /// Returns whether the deletion succeeded. A failure is reported on screen.
+    @discardableResult
+    private func delete(_ ids: Set<UUID>) -> Bool {
+        // The set may be stale if the companion deleted some of these rides while the dialog was open.
+        let ids = ids.intersection(rideIDs)
+        guard !ids.isEmpty else { return true }
+        do {
+            try withAnimation { try controller.deleteRides(ids) }
+            return true
+        } catch {
+            controller.report(error.localizedDescription)
+            return false
+        }
+    }
+
+    #if os(iOS)
+    private var selectedIDs: Set<UUID> { selection.intersection(rideIDs) }
+    private var allSelected: Bool { !rideIDs.isEmpty && selectedIDs.count == rideIDs.count }
+
+    private func setEditing(_ editing: Bool) {
+        withAnimation {
+            editMode = editing ? .active : .inactive
+            if !editing { selection = [] }
+        }
+    }
+    #endif
+}
+
+private struct RideRow: View {
+    let ride: Ride
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(ride.startedAt, format: .dateTime.month().day().hour().minute())
+            Text("\(RideFormat.distance(ride.distance)) • \(RideFormat.duration(ride.elapsed(at: .now)))")
+                .font(.subheadline).foregroundStyle(RideTheme.secondaryText)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .combine)
     }
 }
 
 struct RideDetail: View {
     let ride: Ride
+    @ObservedObject var controller: RideController
+    @State private var confirmDeletion = false
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         List {
+            AttentionSection(controller: controller)
             Section {
                 if segments.isEmpty {
                     ContentUnavailableView("No recorded route", systemImage: "map",
@@ -465,11 +635,33 @@ struct RideDetail: View {
             } header: {
                 Text("Ride summary").foregroundStyle(RideTheme.secondaryText)
             }
+            #if !os(iOS)
+            Section {
+                Button("Delete ride", role: .destructive) { confirmDeletion = true }
+                    .rideDeletionConfirmation(isPresented: $confirmDeletion, count: 1, delete: deleteRide)
+            }
+            #endif
         }
         .navigationTitle("Ride")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Delete ride", systemImage: "trash", role: .destructive) { confirmDeletion = true }
+                    .rideDeletionConfirmation(isPresented: $confirmDeletion, count: 1, delete: deleteRide)
+                    .accessibilityIdentifier("deleteRide")
+            }
+        }
         #endif
+        // Leave the screen once the ride is gone, whether deleted here or from the companion.
+        .onChange(of: controller.archive.isDeleted(ride.id)) { _, deleted in
+            if deleted { dismiss() }
+        }
+    }
+
+    private func deleteRide() {
+        do { try controller.deleteRides([ride.id]) }
+        catch { controller.report(error.localizedDescription) }
     }
 
     private var segments: [[LocationSample]] {

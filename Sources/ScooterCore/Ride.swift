@@ -179,6 +179,11 @@ public struct Ride: Codable, Equatable, Identifiable, Sendable {
 public struct RideArchive: Codable, Equatable, Sendable {
     public var active: Ride?
     public var completed: [Ride]
+    /// Ids of rides the user deleted. Remembered so an older copy arriving from the companion
+    /// or iCloud cannot bring a deleted ride back. Persisted separately by `RideRepository`.
+    public internal(set) var deleted: Set<UUID> = []
+
+    private enum CodingKeys: String, CodingKey { case active, completed }
 
     public init(active: Ride? = nil, completed: [Ride] = []) {
         self.active = active
@@ -202,10 +207,25 @@ public struct RideArchive: Codable, Equatable, Sendable {
     }
 
     public mutating func importCompleted(_ ride: Ride) {
-        guard ride.endedAt != nil else { return }
+        guard ride.endedAt != nil, !deleted.contains(ride.id) else { return }
         completed.removeAll { $0.id == ride.id }
         completed.append(ride)
         completed.sort { $0.startedAt > $1.startedAt }
+    }
+
+    public func isDeleted(_ id: UUID) -> Bool { deleted.contains(id) }
+
+    /// Removes completed rides and remembers their ids. Ids that are not stored yet are remembered
+    /// too, so a ride still in transit from the companion is rejected when it arrives. The active
+    /// ride is never deleted; end it instead. Returns the ids that were newly marked deleted.
+    @discardableResult
+    public mutating func delete(_ ids: Set<UUID>) -> Set<UUID> {
+        var removable = ids
+        if let activeID = active?.id { removable.remove(activeID) }
+        let added = removable.subtracting(deleted)
+        completed.removeAll { removable.contains($0.id) }
+        deleted.formUnion(added)
+        return added
     }
 }
 

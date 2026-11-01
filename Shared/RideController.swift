@@ -65,6 +65,12 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
     var displayedRide: Ride? { archive.active ?? peer?.ride }
     var isRemote: Bool { archive.active == nil && peer?.ride != nil }
 
+    /// Where the rider last recorded a location. Place searches are centred here so nearby results rank first.
+    var lastKnownCoordinate: CLLocationCoordinate2D? {
+        let sample = displayedRide?.samples.last ?? archive.completed.lazy.compactMap { $0.samples.last }.first
+        return sample.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+    }
+
     private override init() {
         storeURL = URL.applicationSupportDirectory.appendingPathComponent("ScooterLog/rides.json")
         super.init()
@@ -197,6 +203,23 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         var next = archive
         next.importCompleted(ride)
         try persist(next)
+    }
+
+    /// Permanently deletes completed rides here and, unless the request came from the companion,
+    /// tells the paired device. Nothing changes if the deletion cannot be saved.
+    func deleteRides(_ ids: Set<UUID>, propagate: Bool = true) throws {
+        guard storageAvailable else { throw RideFailure.storage }
+        var next = archive
+        let removed = next.delete(ids)
+        guard !removed.isEmpty else { return }
+        let repository = RideRepository(directory: storeURL.deletingLastPathComponent())
+        // The saved deletion is the durable boundary; leftover ride files are purged on the next launch.
+        try repository.saveDeleted(removed)
+        archive = next
+        do { try repository.removeCompleted(removed) }
+        catch { report("Removed from History, but a ride file could not be deleted. It stays hidden and is cleaned up on the next launch: \(error.localizedDescription)") }
+        discardQueuedTransfers(of: removed)
+        if propagate { notifyCompanion(deleted: removed) }
     }
 
     private var placesURL: URL { storeURL.deletingLastPathComponent().appendingPathComponent("places.json") }
@@ -387,12 +410,18 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         // A timeout never implies the owner stopped recording.
     }
 
+    /// The companion session, only when it can currently carry data.
+    private var companionSession: WCSession? {
+        guard let session = connectivity, session.activationState == .activated else { return nil }
+        #if os(iOS)
+        guard session.isPaired, session.isWatchAppInstalled else { return nil }
+        #endif
+        return session
+    }
+
     private func broadcast() {
         lastBroadcast = .now
-        guard let session = connectivity, session.activationState == .activated else { return }
-        #if os(iOS)
-        guard session.isPaired, session.isWatchAppInstalled else { return }
-        #endif
+        guard let session = companionSession else { return }
         do {
             let snapshot = PeerSnapshot(ride: archive.active?.preview(), sentAt: .now, recording: recording)
             let data = try JSONEncoder().encode(snapshot)
@@ -431,6 +460,31 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
                 session.transferFile(url, metadata: ["kind": "completedRide"])
             }
         } catch { report("Could not read the companion sync queue: \(error.localizedDescription)") }
+    }
+
+    private func notifyCompanion(deleted ids: Set<UUID>) {
+        companionSession?.transferUserInfo(["deletedRides": ids.map(\.uuidString).sorted()])
+    }
+
+    /// Stops deleted rides from being sent: removes their queued files and cancels transfers in flight.
+    private func discardQueuedTransfers(of ids: Set<UUID>) {
+        let names = Set(ids.map { "\($0.uuidString).json" })
+        if let session = connectivity, session.activationState == .activated {
+            for transfer in session.outstandingFileTransfers where names.contains(transfer.file.fileURL.lastPathComponent) {
+                transfer.cancel()
+            }
+        }
+        for name in names {
+            let url = outbox.appendingPathComponent(name)
+            guard FileManager.default.fileExists(atPath: url.path) else { continue }
+            do { try FileManager.default.removeItem(at: url) }
+            catch { report("Could not clear a deleted ride from the companion sync queue: \(error.localizedDescription)") }
+        }
+    }
+
+    private func isDeletedRideFile(named name: String) -> Bool {
+        guard let id = UUID(uuidString: URL(fileURLWithPath: name).deletingPathExtension().lastPathComponent) else { return false }
+        return archive.isDeleted(id)
     }
 }
 
@@ -477,7 +531,7 @@ extension RideController: WCSessionDelegate {
         do {
             var snapshot = try JSONDecoder().decode(PeerSnapshot.self, from: data)
             if let peer, peer.sentAt > snapshot.sentAt { return }
-            if let ride = snapshot.ride, archive.completed.contains(where: { $0.id == ride.id }) {
+            if let ride = snapshot.ride, archive.completed.contains(where: { $0.id == ride.id }) || archive.isDeleted(ride.id) {
                 snapshot.ride = nil
                 snapshot.recording = false
             }
@@ -524,6 +578,14 @@ extension RideController: WCSessionDelegate {
     }
 
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
+        if let ids = userInfo["deletedRides"] as? [String] {
+            let deleted = Set(ids.compactMap { UUID(uuidString: $0) })
+            Task { @MainActor in
+                do { try self.deleteRides(deleted, propagate: false) }
+                catch { self.report("Could not apply a ride deletion from the companion: \(error.localizedDescription)") }
+            }
+            return
+        }
         guard let id = userInfo["savedRide"] as? String, let uuid = UUID(uuidString: id) else { return }
         Task { @MainActor in
             let url = self.outbox.appendingPathComponent("\(uuid.uuidString).json")
@@ -550,14 +612,18 @@ extension RideController: WCSessionDelegate {
                 self.liveActivity.end(ride)
                 #endif
                 self.connectivity?.transferUserInfo(["savedRide": ride.id.uuidString])
+                // The sender still has a ride that was deleted here (for example it was offline at the time).
+                if self.archive.isDeleted(ride.id) { self.notifyCompanion(deleted: [ride.id]) }
             } catch { self.report("Could not save companion ride: \(error.localizedDescription). It remains on its recording device.") }
         }
     }
 
     nonisolated func session(_ session: WCSession, didFinish fileTransfer: WCSessionFileTransfer, error: (any Error)?) {
         let message = error?.localizedDescription
+        let name = fileTransfer.file.fileURL.lastPathComponent
         Task { @MainActor in
-            if let message {
+            // Cancelling the transfer of a deleted ride is expected, not a failure.
+            if let message, !self.isDeletedRideFile(named: name) {
                 self.report("Companion transfer pending: \(message). It will retry on the next connection.")
             }
         }

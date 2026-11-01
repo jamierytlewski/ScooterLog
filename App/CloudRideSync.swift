@@ -80,9 +80,17 @@ final class CloudRideSync: ObservableObject {
             var page = try await database.records(matching: CKQuery(recordType: recordType, predicate: NSPredicate(value: true)),
                                                    resultsLimit: 100)
             var downloaded = 0
+            var removed = 0
             while true {
                 for (id, result) in page.matchResults {
                     try checkEnabled()
+                    // The user deleted this ride on this device, so remove its iCloud copy instead of downloading it.
+                    if let rideID = UUID(uuidString: id.recordName), controller.archive.isDeleted(rideID) {
+                        do { _ = try await database.deleteRecord(withID: id) }
+                        catch let error as CKError where error.code == .unknownItem { /* already removed */ }
+                        removed += 1
+                        continue
+                    }
                     let record = try result.get()
                     guard let version = record["schemaVersion"] as? Int, version == 1,
                           let asset = record["route"] as? CKAsset, let url = asset.fileURL else {
@@ -96,7 +104,8 @@ final class CloudRideSync: ObservableObject {
                 guard let cursor = page.queryCursor else { break }
                 page = try await database.records(continuingMatchFrom: cursor, resultsLimit: 100)
             }
-            status = "Synced \(rides.count) local and \(downloaded) private iCloud rides plus \(controller.places.visible.count) saved places. Last sync \(Date.now.formatted(date: .omitted, time: .shortened))."
+            let removal = removed == 0 ? "" : " Removed \(removed) deleted from iCloud."
+            status = "Synced \(rides.count) local and \(downloaded) private iCloud rides plus \(controller.places.visible.count) saved places.\(removal) Last sync \(Date.now.formatted(date: .omitted, time: .shortened))."
         } catch is CancellationError {
             status = "Sync stopped. Any already uploaded rides remain in your private iCloud database."
         } catch {
