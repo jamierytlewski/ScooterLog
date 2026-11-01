@@ -42,6 +42,7 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
     @Published private(set) var places = SavedPlaces()
     @Published var errorMessage: String?
     @Published private(set) var locationStatus = "Location permission is required."
+    @Published private(set) var locationAuthorization: CLAuthorizationStatus = .notDetermined
     #if os(iOS)
     let owner = "iPhone"
     #else
@@ -107,9 +108,11 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
     }
 
     private func refreshAuthorization() {
-        switch manager.authorizationStatus {
+        locationAuthorization = manager.authorizationStatus
+        switch locationAuthorization {
         case .authorizedAlways, .authorizedWhenInUse: locationStatus = "Location access ready"
-        case .denied, .restricted: locationStatus = "Location access denied. Enable it in Settings."
+        case .denied: locationStatus = "Location access denied. Enable it in Settings."
+        case .restricted: locationStatus = "Location access is restricted by this device's settings."
         case .notDetermined: locationStatus = "Allow location before your first ride."
         @unknown default: locationStatus = "Location authorization is unavailable."
         }
@@ -175,6 +178,12 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
     func refreshConnection() {
         broadcast()
         flushOutbox()
+    }
+
+    func refreshLiveActivityAppearance() {
+        #if os(iOS)
+        if let ride = archive.active { liveActivity.update(ride) }
+        #endif
     }
 
     func forgetStalePeer() {

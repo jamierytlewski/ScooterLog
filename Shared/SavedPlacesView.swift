@@ -35,61 +35,83 @@ struct SavedPlacesView: View {
     @State private var name = ""
     @State private var editing: SavedPlace?
     @State private var showName = false
+    @State private var pendingDelete: SavedPlace?
+    @State private var confirmDelete = false
+    @FocusState private var searchFocused: Bool
     #endif
 
     var body: some View {
         List {
             if let message = controller.errorMessage {
-                Section("Needs attention") {
-                    Text(message).foregroundStyle(.red)
+                Section {
+                    Label(message, systemImage: "exclamationmark.triangle")
+                        .fixedSize(horizontal: false, vertical: true)
                     Button("Dismiss message") { controller.errorMessage = nil }
+                } header: {
+                    Text("Needs attention").foregroundStyle(RideTheme.secondaryText)
                 }
             }
-            Section("Saved places") {
+            Section {
                 if controller.places.visible.isEmpty {
                     Text("Add Home, Work or any named place on iPhone. Places sync to your watch.")
                 }
                 ForEach(controller.places.visible) { place in
                     #if os(iOS)
-                    HStack {
+                    HStack(alignment: .top) {
                         Text(place.name)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                         Spacer()
-                        Button("Rename") {
-                            editing = place
-                            selected = nil
-                            name = place.name
-                            showName = true
-                        }.buttonStyle(.bordered)
-                        Button(role: .destructive) {
-                            controller.perform { try controller.deletePlace(place.id) }
-                        } label: { Image(systemName: "trash") }
-                            .buttonStyle(.bordered)
-                            .accessibilityLabel("Delete \(place.name)")
+                        Menu {
+                            Button("Rename", systemImage: "pencil") { rename(place) }
+                            Button("Delete", systemImage: "trash", role: .destructive) { requestDelete(place) }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .accessibilityLabel("Actions for \(place.name)")
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button("Delete", systemImage: "trash", role: .destructive) { requestDelete(place) }
+                        Button("Rename", systemImage: "pencil") { rename(place) }
                     }
                     #else
                     Text(place.name)
                     #endif
                 }
+            } header: {
+                Text("Saved places").foregroundStyle(RideTheme.secondaryText)
             }
             #if os(iOS)
-            Section("Add a place") {
+            Section {
                 TextField("Address or place", text: $search.query)
-                Button(search.loading ? "Searching..." : "Search Apple Maps") { Task { await search.search() } }
-                    .disabled(search.loading)
-                Text(search.status).font(.caption)
+                    .focused($searchFocused)
+                    .submitLabel(.search)
+                    .onSubmit { if canSearch { searchPlaces() } }
+                    .accessibilityIdentifier("placeQuery")
+                if search.loading { ProgressView("Searching...") }
+                Button("Search Apple Maps") { searchPlaces() }
+                    .disabled(!canSearch)
+                    .accessibilityIdentifier("searchPlaces")
+                Text(search.status).font(.footnote).foregroundStyle(RideTheme.secondaryText)
                 ForEach(Array(search.results.enumerated()), id: \.offset) { _, item in
                     Button {
                         selected = item
                         editing = nil
                         name = ""
+                        searchFocused = false
                         showName = true
                     } label: {
                         VStack(alignment: .leading) {
-                            Text(item.name ?? "Place")
-                            Text(item.address?.fullAddress ?? "").font(.caption)
+                            Text(item.name ?? "Place").foregroundStyle(.primary)
+                            Text(item.address?.fullAddress ?? "").font(.caption).foregroundStyle(RideTheme.secondaryText)
                         }
+                        .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+            } header: {
+                Text("Add a place").foregroundStyle(RideTheme.secondaryText)
             }
             #endif
             Section {
@@ -99,6 +121,8 @@ struct SavedPlacesView: View {
         }
         .navigationTitle("Saved places")
         #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        .scrollDismissesKeyboard(.interactively)
         .alert(editing == nil ? "Name this place" : "Rename place", isPresented: $showName) {
             TextField("Home, Work, or any name", text: $name)
             Button("Save") {
@@ -114,11 +138,44 @@ struct SavedPlacesView: View {
                     }
                 }
             }
-            .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || name.count > 100)
+            .disabled(trimmedName.isEmpty || trimmedName.count > 100)
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Use Home, Work or another name (up to 100 characters).")
         }
+        .confirmationDialog("Delete saved place?", isPresented: $confirmDelete, titleVisibility: .visible,
+                            presenting: pendingDelete) { place in
+            Button("Delete place", role: .destructive) {
+                controller.perform { try controller.deletePlace(place.id) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { place in
+            Text("Remove \(place.name) from saved places? Completed rides are not affected.")
+        }
         #endif
     }
+
+    #if os(iOS)
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var canSearch: Bool {
+        !search.loading && !search.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func searchPlaces() {
+        searchFocused = false
+        Task { await search.search() }
+    }
+
+    private func rename(_ place: SavedPlace) {
+        editing = place
+        selected = nil
+        name = place.name
+        showName = true
+    }
+
+    private func requestDelete(_ place: SavedPlace) {
+        pendingDelete = place
+        confirmDelete = true
+    }
+    #endif
 }

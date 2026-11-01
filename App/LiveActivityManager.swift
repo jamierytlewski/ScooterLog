@@ -7,7 +7,7 @@ final class LiveActivityManager {
     private func content(_ ride: Ride) -> ActivityContent<RideActivityAttributes.ContentState> {
         ActivityContent(state: .init(distance: ride.distance, speed: ride.currentSpeed(at: .now),
                                      stopped: ride.stoppedTime(at: .now), updatedAt: ride.samples.last?.timestamp ?? ride.startedAt,
-                                     endedAt: ride.endedAt),
+                                     endedAt: ride.endedAt, theme: RideTheme.selected),
                         staleDate: (ride.samples.last?.timestamp ?? ride.startedAt).addingTimeInterval(15))
     }
 

@@ -175,20 +175,25 @@ final class CloudRideSync: ObservableObject {
 
 struct CloudSyncView: View {
     @ObservedObject var controller: RideController
-    @StateObject private var cloud = CloudRideSync()
+    @ObservedObject var cloud: CloudRideSync
     @State private var confirmDelete = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Private iCloud sync").font(.headline)
+        Section {
             Toggle("Sync rides and saved places", isOn: Binding(get: { cloud.enabled }, set: cloud.setEnabled))
-            Text("Opt-in: uploads completed GPS routes/timing and saved-place names/coordinates (including deletion markers) to your private CloudKit database. No heart-rate samples. Active recording stays local.")
-                .font(.caption)
-            Text(cloud.status).font(.caption)
+            Text(cloud.status).font(.footnote).foregroundStyle(RideTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("cloudStatus")
+            if cloud.busy { ProgressView("Working...") }
             Button(cloud.busy ? "Working..." : "Sync now") { Task { await cloud.sync(with: controller) } }
                 .disabled(!cloud.enabled || cloud.busy)
             Button("Delete private iCloud data", role: .destructive) { confirmDelete = true }
                 .disabled(cloud.busy)
+        } header: {
+            Text("Private iCloud sync").foregroundStyle(RideTheme.secondaryText)
+        } footer: {
+            Text("Opt-in: uploads completed GPS routes/timing and saved-place names/coordinates (including deletion markers) to your private CloudKit database. No heart-rate samples. Active recording stays local.")
+                .foregroundStyle(RideTheme.secondaryText)
         }
         .confirmationDialog("Delete all ScooterLog rides and places from your private iCloud database?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete iCloud data", role: .destructive) { Task { await cloud.deleteCloudRides() } }

@@ -9,20 +9,25 @@
 /* Begin PBXBuildFile section */
 		0086049E73D099858DB51F6E /* ScooterLogApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D5D84073CE0C8F8AFC4C86 /* ScooterLogApp.swift */; };
 		0734437FD0F607BDA31338FB /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E1CD3C35BC8DC3C922316783 /* PrivacyInfo.xcprivacy */; };
+		0D7EB4683C77F5271E108FD0 /* RideTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A81D3BB550162F30D18A57A /* RideTheme.swift */; };
 		18A20BFA362C9AC029DCEFBE /* RideDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE329B9BCAD2567197CE3563 /* RideDashboard.swift */; };
 		2CA8B54D7485153D90E4025F /* ScooterLiveActivity.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 33CB0780E7900DDF7FC6235D /* ScooterLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		37833B82D5DB602D114A29C8 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F874475C78CFE06A8EB339CE /* LiveActivityManager.swift */; };
+		40918759F7837E16B2450B0E /* RideTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A81D3BB550162F30D18A57A /* RideTheme.swift */; };
 		472E8E5F2550DD4C514F48A5 /* ScooterLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8EDF7DC422D08C8FBCFF3FD /* ScooterLiveActivity.swift */; };
 		4F394D61A9C6AC99CA66D43C /* RideActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C04A5B1FBA44F1F3D694FE6 /* RideActivityAttributes.swift */; };
 		58C4F23D92DDC61AC784EDE6 /* RideIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAEB2528B14C3F6E28F641AC /* RideIntents.swift */; };
 		5DA136083268E5DADA906B09 /* CloudRideSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E672D362BACD28E2DA3CDBF /* CloudRideSync.swift */; };
 		65E50224F6DFC99FD152F9C6 /* HealthReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663A72BAA355B34FD498F326 /* HealthReader.swift */; };
 		66628ED85C95DA86C59D21EE /* RideIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAEB2528B14C3F6E28F641AC /* RideIntents.swift */; };
+		69A55CCDCF6EF6C685BA3382 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9F63D7889E91C10B2633A29D /* Assets.xcassets */; };
 		6C95789E5C04ABA37845406E /* SavedPlacesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67D1D68D312F05ABFFD4392D /* SavedPlacesView.swift */; };
+		6D8016EF28CF418247BBA4F2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9F63D7889E91C10B2633A29D /* Assets.xcassets */; };
 		6E7ACAFE9F3311620CF6540B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E1CD3C35BC8DC3C922316783 /* PrivacyInfo.xcprivacy */; };
 		7A2E31AD595B6917A850C0B3 /* RideController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125F3B5377547197A4F82337 /* RideController.swift */; };
 		8CD36DF6FDD65FD847436093 /* RideDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE329B9BCAD2567197CE3563 /* RideDashboard.swift */; };
 		8F1E7ECFB6A9D4591314765C /* ScooterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0342FAA71038BAA8A73C8291 /* ScooterCore */; };
+		A210C2B35ABC2E2C5C2BD2C1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9F63D7889E91C10B2633A29D /* Assets.xcassets */; };
 		AE68D403D97C6305E80D1B47 /* RideActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C04A5B1FBA44F1F3D694FE6 /* RideActivityAttributes.swift */; };
 		B6B141054D55A9A520775204 /* HealthReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663A72BAA355B34FD498F326 /* HealthReader.swift */; };
 		C6D72E5F3653271E6868613D /* DirectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C856AADEC61D32C122D24A /* DirectionsView.swift */; };
@@ -30,6 +35,7 @@
 		D4E728145F4D19CD6AB508C5 /* RideFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 056DF0FFA1C34B3F10CB87DB /* RideFlowTests.swift */; };
 		D653B4131B7319B77B5C8AA9 /* DirectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C856AADEC61D32C122D24A /* DirectionsView.swift */; };
 		D720520699542B68D54601BB /* ScooterWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 562228D553A7F896CAA50606 /* ScooterWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DACECBC46A7C41705B473A00 /* RideTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A81D3BB550162F30D18A57A /* RideTheme.swift */; };
 		E0A49B0C6A85601BF424AEFB /* RideController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125F3B5377547197A4F82337 /* RideController.swift */; };
 		E4DCEC9393871488B9E396C8 /* ScooterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 415B67494CBA5C9553D7A11C /* ScooterCore */; };
 		E68D994F31FD4BE5CB18AEE6 /* ScooterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4BD326E61FEB5E774D8EDEC1 /* ScooterCore */; };
@@ -91,14 +97,16 @@
 		11C856AADEC61D32C122D24A /* DirectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectionsView.swift; sourceTree = "<group>"; };
 		125F3B5377547197A4F82337 /* RideController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideController.swift; sourceTree = "<group>"; };
 		26D5D84073CE0C8F8AFC4C86 /* ScooterLogApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScooterLogApp.swift; sourceTree = "<group>"; };
+		2B533FDC214299797A5009DC /* jamierytlewski-crispy-eureka */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "jamierytlewski-crispy-eureka"; path = .; sourceTree = SOURCE_ROOT; };
 		33CB0780E7900DDF7FC6235D /* ScooterLiveActivity.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ScooterLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		40AFD72254126EB2F6D50194 /* jamierytlewski-urban-giggle */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "jamierytlewski-urban-giggle"; path = .; sourceTree = SOURCE_ROOT; };
 		562228D553A7F896CAA50606 /* ScooterWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScooterWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C04A5B1FBA44F1F3D694FE6 /* RideActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideActivityAttributes.swift; sourceTree = "<group>"; };
 		663A72BAA355B34FD498F326 /* HealthReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthReader.swift; sourceTree = "<group>"; };
 		67D1D68D312F05ABFFD4392D /* SavedPlacesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPlacesView.swift; sourceTree = "<group>"; };
+		6A81D3BB550162F30D18A57A /* RideTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideTheme.swift; sourceTree = "<group>"; };
 		71241BAB06ADA60CB076196F /* ScooterLogUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ScooterLogUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E672D362BACD28E2DA3CDBF /* CloudRideSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudRideSync.swift; sourceTree = "<group>"; };
+		9F63D7889E91C10B2633A29D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9FEB11418A52807311A182B1 /* ScooterLog.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ScooterLog.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DAEB2528B14C3F6E28F641AC /* RideIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideIntents.swift; sourceTree = "<group>"; };
 		E1CD3C35BC8DC3C922316783 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -197,7 +205,7 @@
 		B9B776B5B25E03C3C76ACAD1 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				40AFD72254126EB2F6D50194 /* jamierytlewski-urban-giggle */,
+				2B533FDC214299797A5009DC /* jamierytlewski-crispy-eureka */,
 			);
 			name = Packages;
 			sourceTree = "<group>";
@@ -205,12 +213,14 @@
 		E9346F255A99E11503959F04 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				9F63D7889E91C10B2633A29D /* Assets.xcassets */,
 				11C856AADEC61D32C122D24A /* DirectionsView.swift */,
 				663A72BAA355B34FD498F326 /* HealthReader.swift */,
 				E1CD3C35BC8DC3C922316783 /* PrivacyInfo.xcprivacy */,
 				125F3B5377547197A4F82337 /* RideController.swift */,
 				FE329B9BCAD2567197CE3563 /* RideDashboard.swift */,
 				DAEB2528B14C3F6E28F641AC /* RideIntents.swift */,
+				6A81D3BB550162F30D18A57A /* RideTheme.swift */,
 				67D1D68D312F05ABFFD4392D /* SavedPlacesView.swift */,
 			);
 			path = Shared;
@@ -262,6 +272,7 @@
 			buildConfigurationList = 4545ED508254B3AC603264BE /* Build configuration list for PBXNativeTarget "ScooterLiveActivity" */;
 			buildPhases = (
 				DB6D58D4B8B517588EDB05FD /* Sources */,
+				EBD50C949EDD6225097C5B6B /* Resources */,
 				518B9F3061333DA63495C334 /* Frameworks */,
 			);
 			buildRules = (
@@ -354,6 +365,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A210C2B35ABC2E2C5C2BD2C1 /* Assets.xcassets in Resources */,
 				0734437FD0F607BDA31338FB /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -362,7 +374,16 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6D8016EF28CF418247BBA4F2 /* Assets.xcassets in Resources */,
 				6E7ACAFE9F3311620CF6540B /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EBD50C949EDD6225097C5B6B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				69A55CCDCF6EF6C685BA3382 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -382,6 +403,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AE68D403D97C6305E80D1B47 /* RideActivityAttributes.swift in Sources */,
+				40918759F7837E16B2450B0E /* RideTheme.swift in Sources */,
 				472E8E5F2550DD4C514F48A5 /* ScooterLiveActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -398,6 +420,7 @@
 				7A2E31AD595B6917A850C0B3 /* RideController.swift in Sources */,
 				8CD36DF6FDD65FD847436093 /* RideDashboard.swift in Sources */,
 				66628ED85C95DA86C59D21EE /* RideIntents.swift in Sources */,
+				0D7EB4683C77F5271E108FD0 /* RideTheme.swift in Sources */,
 				6C95789E5C04ABA37845406E /* SavedPlacesView.swift in Sources */,
 				0086049E73D099858DB51F6E /* ScooterLogApp.swift in Sources */,
 			);
@@ -412,6 +435,7 @@
 				E0A49B0C6A85601BF424AEFB /* RideController.swift in Sources */,
 				18A20BFA362C9AC029DCEFBE /* RideDashboard.swift in Sources */,
 				58C4F23D92DDC61AC784EDE6 /* RideIntents.swift in Sources */,
+				DACECBC46A7C41705B473A00 /* RideTheme.swift in Sources */,
 				EE21FDBBB9074438762D8060 /* SavedPlacesView.swift in Sources */,
 				CCEBC9F4B04A1996D3870D80 /* ScooterWatchApp.swift in Sources */,
 			);
@@ -441,7 +465,7 @@
 		16CCD1E0443F840C1736BA77 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
 				CODE_SIGN_ENTITLEMENTS = Configuration/Phone.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = NO;
@@ -453,14 +477,14 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.scooterlog.app;
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
 		1FF4E963263289B9F8CCD36D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
 				CODE_SIGN_ENTITLEMENTS = Configuration/Watch.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Configuration/Watch-Info.plist";
@@ -484,7 +508,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.scooterlog.app.activity;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -561,7 +585,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.scooterlog.app.uitests;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_TARGET_NAME = ScooterLog;
 			};
 			name = Release;
@@ -569,7 +593,7 @@
 		33020939049BFB647DBBC113 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
 				CODE_SIGN_ENTITLEMENTS = Configuration/Watch.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Configuration/Watch-Info.plist";
@@ -592,7 +616,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.scooterlog.app.uitests;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_TARGET_NAME = ScooterLog;
 			};
 			name = Debug;
@@ -678,14 +702,14 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.scooterlog.app.activity;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
 		DD82D7E39094F9171B8217FD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
 				CODE_SIGN_ENTITLEMENTS = Configuration/Phone.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = NO;
@@ -697,7 +721,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.scooterlog.app;
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};

@@ -56,39 +56,82 @@ final class DirectionsModel: ObservableObject {
 struct DirectionsView: View {
     @ObservedObject var controller: RideController
     @StateObject private var model = DirectionsModel()
+    @FocusState private var destinationFocused: Bool
 
     var body: some View {
         Form {
-            Section("Saved destinations") {
+            Section {
                 ForEach(controller.places.visible) { place in
                     Button("Directions to \(place.name)") {
                         Task { await model.search(from: recentCoordinate, savedPlace: place) }
                     }.disabled(model.loading)
                 }
                 NavigationLink("Manage saved places") { SavedPlacesView(controller: controller) }
+            } header: {
+                Text("Saved destinations").foregroundStyle(RideTheme.secondaryText)
             }
             Section {
                 TextField("Destination", text: $model.destination)
-                Button(model.loading ? "Finding route..." : "Find walking route") {
-                    Task { await model.search(from: recentCoordinate) }
+                    .focused($destinationFocused)
+                    .submitLabel(.search)
+                    .onSubmit { if canFindRoute { findRoute() } }
+                    .accessibilityIdentifier("destinationQuery")
+                if model.loading { ProgressView("Finding route...") }
+                Button("Find walking route") {
+                    findRoute()
                 }
-                .disabled(model.loading)
-                Text(model.status).font(.footnote)
+                .disabled(!canFindRoute)
+                .accessibilityIdentifier("findRoute")
+                Text(model.status).font(.footnote).foregroundStyle(RideTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Section("Manual directions") {
+            Section {
                 if !model.steps.isEmpty {
                     Text("Step \(model.stepIndex + 1) of \(model.steps.count)").font(.caption)
                     Text(model.steps[model.stepIndex]).font(.headline)
-                    HStack {
-                        Button("Back") { model.stepIndex -= 1 }.disabled(model.stepIndex == 0)
-                        Button("Next") { model.stepIndex += 1 }.disabled(model.stepIndex == model.steps.count - 1)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 12) { stepControls }
+                        VStack(spacing: 8) { stepControls }
                     }
+                    .buttonStyle(.bordered)
+                } else {
+                    Text("Find a route to see directions here.").foregroundStyle(RideTheme.secondaryText)
                 }
                 Text("Not scooter-specific. Check local laws and route safety. No automatic turns, rerouting or haptics.")
-                    .font(.footnote).foregroundStyle(.secondary)
+                    .font(.footnote).foregroundStyle(RideTheme.secondaryText)
+            } header: {
+                Text("Manual directions").foregroundStyle(RideTheme.secondaryText)
             }
         }
         .navigationTitle("Directions")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        .scrollDismissesKeyboard(.interactively)
+        #endif
+    }
+
+    @ViewBuilder private var stepControls: some View {
+        Button { model.stepIndex -= 1 } label: {
+            Label("Back", systemImage: "chevron.left").frame(minWidth: 44, minHeight: 44)
+                .fixedSize(horizontal: true, vertical: false)
+        }
+        .disabled(model.stepIndex == 0)
+        .accessibilityLabel("Previous direction")
+        Button { model.stepIndex += 1 } label: {
+            Label("Next", systemImage: "chevron.right").frame(minWidth: 44, minHeight: 44)
+                .fixedSize(horizontal: true, vertical: false)
+        }
+        .disabled(model.stepIndex == model.steps.count - 1)
+        .accessibilityLabel("Next direction")
+    }
+
+    private var canFindRoute: Bool {
+        !model.loading && !model.destination.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func findRoute() {
+        destinationFocused = false
+        Task { await model.search(from: recentCoordinate) }
     }
 
     private var recentCoordinate: CLLocationCoordinate2D? {

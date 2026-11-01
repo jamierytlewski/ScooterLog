@@ -8,6 +8,7 @@ struct RideActivityAttributes: ActivityAttributes {
         var stopped: Double
         var updatedAt: Date
         var endedAt: Date?
+        var theme: RideTheme?
     }
     var rideID: UUID
     var startedAt: Date

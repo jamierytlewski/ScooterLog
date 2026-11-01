@@ -14,23 +14,27 @@ struct ScooterRideWidget: Widget {
             RideActivityView(context: context)
         } dynamicIsland: { context in
             DynamicIsland {
-                DynamicIslandExpandedRegion(.leading) { Label("ScooterLog", systemImage: "scooter") }
+                DynamicIslandExpandedRegion(.leading) {
+                    Label { Text("ScooterLog") } icon: { RideActivitySymbol(context: context) }
+                }
                 DynamicIslandExpandedRegion(.trailing) {
                     Text(RideUnits.distance(context.state.distance))
+                        .monospacedDigit()
+                        .accessibilityLabel("Distance \(RideUnits.distance(context.state.distance))")
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack {
                         RideElapsed(context: context)
                         Spacer()
-                        Text(context.isStale ? "GPS stale" : context.attributes.owner)
+                        Text(context.isStale && context.state.endedAt == nil ? "GPS stale" : context.attributes.owner)
                     }
                 }
             } compactLeading: {
-                Image(systemName: "scooter")
+                RideActivitySymbol(context: context)
             } compactTrailing: {
-                Text(context.isStale ? "--" : RideUnits.distance(context.state.distance))
+                CompactRideDistance(context: context)
             } minimal: {
-                Image(systemName: context.isStale ? "location.slash" : "scooter")
+                RideActivitySymbol(context: context)
             }
         }
         .supplementalActivityFamilies([.small])
@@ -38,15 +42,45 @@ struct ScooterRideWidget: Widget {
 
 }
 
+private struct RideActivitySymbol: View {
+    let context: ActivityViewContext<RideActivityAttributes>
+
+    var body: some View {
+        Image(systemName: context.isStale && context.state.endedAt == nil ? "location.slash" : "scooter")
+            .foregroundStyle((context.state.theme ?? .tronBlue).color)
+            .accessibilityLabel(context.isStale && context.state.endedAt == nil ? "Scooter ride, GPS stale" : "Scooter ride")
+    }
+}
+
+private struct CompactRideDistance: View {
+    let context: ActivityViewContext<RideActivityAttributes>
+    @Environment(\.isDynamicIslandLimitedInWidth) private var limitedWidth
+
+    var body: some View {
+        if !limitedWidth {
+            Text(context.isStale && context.state.endedAt == nil ? "--" : RideUnits.distance(context.state.distance))
+                .font(.caption.monospacedDigit())
+                .accessibilityLabel(context.isStale && context.state.endedAt == nil
+                                    ? "Distance unavailable, GPS stale"
+                                    : "Distance \(RideUnits.distance(context.state.distance))")
+        }
+    }
+}
+
 private struct RideElapsed: View {
     let context: ActivityViewContext<RideActivityAttributes>
 
-    @ViewBuilder var body: some View {
+    var body: some View {
+        elapsedText.monospacedDigit()
+            .accessibilityLabel("Elapsed time")
+            .accessibilityValue(elapsedText)
+    }
+
+    private var elapsedText: Text {
         if let end = context.state.endedAt {
-            Text(Duration.seconds(end.timeIntervalSince(context.attributes.startedAt)), format: .time(pattern: .hourMinuteSecond))
+            return Text(Duration.seconds(end.timeIntervalSince(context.attributes.startedAt)), format: .time(pattern: .hourMinuteSecond))
         } else {
-            Text(timerInterval: context.attributes.startedAt...Date.distantFuture, countsDown: false)
-                .monospacedDigit()
+            return Text(timerInterval: context.attributes.startedAt...Date.distantFuture, countsDown: false)
         }
     }
 
@@ -60,37 +94,45 @@ private struct RideActivityView: View {
         Group {
             if family == .small {
                 VStack(alignment: .leading, spacing: 4) {
-                    Label("ScooterLog", systemImage: "scooter").font(.caption)
+                    Label { Text("ScooterLog") } icon: { RideActivitySymbol(context: context) }
+                        .font(.caption)
                     RideElapsed(context: context).font(.headline.monospacedDigit())
+                        .foregroundStyle((context.state.theme ?? .tronBlue).color)
                     Text(RideUnits.distance(context.state.distance))
                         .font(.title3.monospacedDigit())
-                    status.font(.caption2)
+                        .accessibilityLabel("Distance \(RideUnits.distance(context.state.distance))")
+                    status.font(.caption)
                 }
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Label("ScooterLog • \(context.attributes.owner)", systemImage: "scooter")
+                        Label { Text("ScooterLog • \(context.attributes.owner)") } icon: {
+                            RideActivitySymbol(context: context)
+                        }
                         Spacer()
                         status
                     }.font(.caption)
                     HStack {
                         RideElapsed(context: context)
+                            .foregroundStyle((context.state.theme ?? .tronBlue).color)
                         Spacer()
                         Text(RideUnits.distance(context.state.distance))
+                            .accessibilityLabel("Distance \(RideUnits.distance(context.state.distance))")
                     }.font(.title2.monospacedDigit())
-                    Text(context.isStale ? "Open app for current metrics" : "Stopped estimate: \(Int(context.state.stopped)) sec")
+                    Text(isStale ? "Open app for current metrics" : "Stopped estimate: \(Int(context.state.stopped)) sec")
                         .font(.caption)
                 }
             }
         }
         .padding()
-        .activityBackgroundTint(.black)
-        .activitySystemActionForegroundColor(.white)
-        .foregroundStyle(.white)
+        .activitySystemActionForegroundColor((context.state.theme ?? .tronBlue).color)
+        .foregroundStyle(.primary)
     }
 
+    private var isStale: Bool { context.state.endedAt == nil && context.isStale }
+
     private var status: some View {
-        Text(context.state.endedAt != nil ? "Saved" : context.isStale ? "GPS stale" : "Ride active")
-            .foregroundStyle(context.isStale ? Color.orange : Color.white)
+        Label(context.state.endedAt != nil ? "Saved" : isStale ? "GPS stale" : "Ride active",
+              systemImage: context.state.endedAt != nil ? "checkmark.circle" : isStale ? "location.slash" : "record.circle")
     }
 }
