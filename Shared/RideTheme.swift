@@ -26,6 +26,17 @@ enum RideTheme: String, CaseIterable, Identifiable, Codable {
     }
 }
 extension View {
+    func ridePanelRow() -> some View {
+        #if os(watchOS)
+            self.listRowBackground(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(RideTheme.panel)
+            )
+        #else
+            self.listRowBackground(RideTheme.panel)
+        #endif
+    }
+
     func rideSurface() -> some View {
         #if os(iOS)
             self
@@ -75,11 +86,19 @@ struct RideToolIcon: View {
     let systemImage: String
     @AppStorage(RideTheme.preferenceKey) private var theme: RideTheme = .tronBlue
 
+    private var side: CGFloat {
+        #if os(watchOS)
+            32
+        #else
+            40
+        #endif
+    }
+
     var body: some View {
         Image(systemName: systemImage)
             .font(.body.weight(.semibold))
             .foregroundStyle(theme.color)
-            .frame(width: 40, height: 40)
+            .frame(width: side, height: side)
             .background(theme.color.opacity(0.10), in: .rect(cornerRadius: 12))
             .accessibilityHidden(true)
     }

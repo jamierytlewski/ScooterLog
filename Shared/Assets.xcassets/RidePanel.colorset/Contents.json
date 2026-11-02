@@ -1,6 +1,13 @@
 {
   "colors": [
     {
+      "idiom": "watch",
+      "color": {
+        "color-space": "srgb",
+        "components": { "red": "0.047", "green": "0.075", "blue": "0.114", "alpha": "1.000" }
+      }
+    },
+    {
       "idiom": "universal",
       "color": {
         "color-space": "srgb",

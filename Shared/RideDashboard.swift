@@ -105,7 +105,7 @@ struct RideDashboard: View {
                 } header: {
                     Text("Ride tools").foregroundStyle(RideTheme.secondaryText)
                 }
-                .listRowBackground(RideTheme.panel)
+                .ridePanelRow()
                 #if os(iOS)
                 if controller.locationAuthorization != .authorizedWhenInUse
                     && controller.locationAuthorization != .authorizedAlways {
@@ -278,11 +278,7 @@ struct RideDashboard: View {
         Label {
             Text(title).fixedSize(horizontal: false, vertical: true)
         } icon: {
-            #if os(iOS)
             RideToolIcon(systemImage: systemImage)
-            #else
-            Image(systemName: systemImage).foregroundStyle(theme.color).accessibilityHidden(true)
-            #endif
         }
         .font(.headline)
         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
@@ -622,7 +618,7 @@ struct HistoryView: View {
         }
         ForEach(controller.archive.completed) { ride in
             row(for: ride)
-                .listRowBackground(RideTheme.panel)
+                .ridePanelRow()
                 .accessibilityIdentifier("rideRow")
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     // Not `.destructive`: that role animates the row away and drops a dialog attached to it.
@@ -754,7 +750,7 @@ struct RideDetail: View {
                     .accessibilityHint("Route segments are separated where GPS data is missing.")
                 }
             }
-            .listRowBackground(RideTheme.panel)
+            .ridePanelRow()
             Section {
                 Text(ride.startedAt, format: .dateTime).font(.headline)
                 Text(RideFormat.distance(ride.distance))
@@ -773,7 +769,7 @@ struct RideDetail: View {
             } header: {
                 Text("Ride summary").foregroundStyle(RideTheme.secondaryText)
             }
-            .listRowBackground(RideTheme.panel)
+            .ridePanelRow()
             #if !os(iOS)
             Section {
                 Button("Delete ride", role: .destructive) { confirmDeletion = true }

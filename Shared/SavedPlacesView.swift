@@ -56,7 +56,7 @@ struct SavedPlacesView: View {
             } header: {
                 Text("Saved places").foregroundStyle(RideTheme.secondaryText)
             }
-            .listRowBackground(RideTheme.panel)
+            .ridePanelRow()
             #if os(iOS)
             Section {
                 NavigationLink {
