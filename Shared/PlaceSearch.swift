@@ -341,6 +341,7 @@ struct PlacePicker: View {
                 }
             }
         }
+        .rideSurface()
         .overlay { placeholder }
         .overlay {
             if model.isBusy { ProgressView("Searching...").padding().background(.regularMaterial, in: .rect(cornerRadius: 12)) }

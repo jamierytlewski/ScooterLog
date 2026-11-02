@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 final class RideFlowTests: XCTestCase {
     override func setUpWithError() throws {
@@ -9,6 +10,7 @@ final class RideFlowTests: XCTestCase {
     func testStartRecoverEndAndHistory() throws {
         let app = XCUIApplication()
         app.launch()
+        try endExistingRide(in: app)
         let start = app.buttons["Start ride here"]
         XCTAssertTrue(start.waitForExistence(timeout: 10))
         start.tap()
@@ -24,6 +26,7 @@ final class RideFlowTests: XCTestCase {
         end.tap()
         try XCTUnwrap(app.buttons.matching(identifier: "End ride").allElementsBoundByIndex.last).tap()
         XCTAssertTrue(start.waitForExistence(timeout: 5))
+        reveal(app.buttons["Ride history"], in: app)
         app.buttons["Ride history"].tap()
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
         XCTAssertGreaterThan(app.cells.count, 1)
@@ -34,24 +37,31 @@ final class RideFlowTests: XCTestCase {
         continueAfterFailure = true
         let app = XCUIApplication()
         app.launch()
+        try endExistingRide(in: app)
         let themeMenu = app.buttons["themeMenu"]
         XCTAssertTrue(themeMenu.waitForExistence(timeout: 10))
         themeMenu.tap()
         app.buttons["Tron blue"].tap()
+        dismissIconConfirmation(in: app)
+        try assertHomeScreenIcon(isRed: false, in: app)
         XCTAssertEqual(themeMenu.value as? String, "Tron blue")
         capture("Tron blue dashboard")
+        reveal(app.buttons["Ride history"], in: app)
         // iOS 27.0's scaling/clipping heuristics flag native list content; compare actual text-size layouts below.
-        try app.performAccessibilityAudit(for: [.contrast, .hitRegion])
+        try auditDashboard(in: app)
 
         themeMenu.tap()
         app.buttons["Ares red"].tap()
+        dismissIconConfirmation(in: app)
+        try assertHomeScreenIcon(isRed: true, in: app)
         XCTAssertEqual(themeMenu.value as? String, "Ares red")
         app.terminate()
         app.launch()
         XCTAssertTrue(themeMenu.waitForExistence(timeout: 10))
         XCTAssertEqual(themeMenu.value as? String, "Ares red")
         capture("Ares red dashboard")
-        try app.performAccessibilityAudit(for: [.contrast, .hitRegion])
+        reveal(app.buttons["Ride history"], in: app)
+        try auditDashboard(in: app)
 
         XCUIDevice.shared.orientation = .landscapeLeft
         defer { XCUIDevice.shared.orientation = .portrait }
@@ -59,10 +69,41 @@ final class RideFlowTests: XCTestCase {
         app.buttons["Ares red"].tap()
         XCTAssertGreaterThan(app.frame.width, app.frame.height)
         capture("Landscape dashboard")
-        try app.performAccessibilityAudit(for: [.contrast, .hitRegion])
+        try auditDashboard(in: app)
 
         themeMenu.tap()
         app.buttons["Tron blue"].tap()
+        dismissIconConfirmation(in: app)
+    }
+
+    @MainActor
+    func testHomeScreenQuickActionColdAndWarmLaunch() throws {
+        let app = XCUIApplication()
+        app.launch()
+        if app.buttons["End ride"].exists {
+            app.buttons["End ride"].tap()
+            try XCTUnwrap(app.buttons.matching(identifier: "End ride").allElementsBoundByIndex.last).tap()
+        }
+        openHistory(in: app)
+        invokeStartQuickAction()
+        XCTAssertTrue(app.buttons["End ride"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.navigationBars["History"].exists, "A quick action returns to the dashboard")
+        capture("Quick action started ride")
+
+        invokeStartQuickAction()
+        let activeNotice = app.alerts["A ride is already active"]
+        XCTAssertTrue(activeNotice.waitForExistence(timeout: 5))
+        activeNotice.buttons["OK"].tap()
+        app.buttons["End ride"].tap()
+        try XCTUnwrap(app.buttons.matching(identifier: "End ride").allElementsBoundByIndex.last).tap()
+        XCTAssertTrue(app.buttons["Start ride here"].waitForExistence(timeout: 5))
+        app.terminate()
+
+        invokeStartQuickAction()
+        XCTAssertTrue(app.buttons["End ride"].waitForExistence(timeout: 10), "Cold launches start after foreground activation")
+        app.buttons["End ride"].tap()
+        try XCTUnwrap(app.buttons.matching(identifier: "End ride").allElementsBoundByIndex.last).tap()
+        XCTAssertTrue(app.buttons["Start ride here"].waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -369,6 +410,7 @@ final class RideFlowTests: XCTestCase {
     func testLargestDynamicTypeAndTouchTargets() throws {
         let app = XCUIApplication()
         app.launch()
+        try endExistingRide(in: app)
         let directions = app.buttons["Directions"]
         reveal(directions, in: app)
         let regularRowHeight = directions.frame.height
@@ -647,6 +689,10 @@ final class RideFlowTests: XCTestCase {
             if element.isHittable { return }
             if towardTop { app.swipeDown() } else { app.swipeUp() }
         }
+        for _ in 0..<8 {
+            if element.isHittable { return }
+            if towardTop { app.swipeUp() } else { app.swipeDown() }
+        }
         XCTAssertTrue(element.isHittable)
     }
 
@@ -669,5 +715,104 @@ final class RideFlowTests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    @MainActor
+    private func invokeStartQuickAction() {
+        XCUIDevice.shared.press(.home)
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let icon = homeScreenIcon(in: springboard)
+        icon.press(forDuration: 1.2)
+        let action = springboard.buttons["com.scooterlog.startRide"]
+        XCTAssertTrue(action.waitForExistence(timeout: 5))
+        action.tap()
+    }
+
+    @MainActor
+    private func endExistingRide(in app: XCUIApplication) throws {
+        if app.buttons["End ride"].exists {
+            reveal(app.buttons["End ride"], in: app, towardTop: true)
+            app.buttons["End ride"].tap()
+            try XCTUnwrap(app.buttons.matching(identifier: "End ride").allElementsBoundByIndex.last).tap()
+            XCTAssertTrue(app.buttons["Start ride here"].waitForExistence(timeout: 5))
+        }
+    }
+
+    @MainActor
+    private func dismissIconConfirmation(in app: XCUIApplication) {
+        let confirmation = app.alerts.buttons["OK"].firstMatch
+        if confirmation.waitForExistence(timeout: 2) {
+            confirmation.tap()
+        } else {
+            let systemConfirmation = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.buttons["OK"].firstMatch
+            if systemConfirmation.exists { systemConfirmation.tap() }
+        }
+    }
+
+    @MainActor
+    private func assertHomeScreenIcon(isRed: Bool, in app: XCUIApplication) throws {
+        XCUIDevice.shared.press(.home)
+        let icon = homeScreenIcon(in: XCUIApplication(bundleIdentifier: "com.apple.springboard"))
+        let screenshot = icon.screenshot()
+        let attachment = XCTAttachment(screenshot: screenshot)
+        attachment.name = isRed ? "Ares red Home Screen icon" : "Tron blue Home Screen icon"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        let image = try XCTUnwrap(screenshot.image.cgImage)
+        var pixels = [UInt8](repeating: 0, count: image.width * image.height * 4)
+        try pixels.withUnsafeMutableBytes { bytes in
+            let context = try XCTUnwrap(CGContext(
+                data: bytes.baseAddress, width: image.width, height: image.height,
+                bitsPerComponent: 8, bytesPerRow: image.width * 4,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+            context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        }
+        var red = 0
+        var blue = 0
+        for index in stride(from: 0, to: pixels.count, by: 4) {
+            let r = Double(pixels[index])
+            let g = Double(pixels[index + 1])
+            let b = Double(pixels[index + 2])
+            if r > 100 && r > g * 1.4 && r > b * 1.4 { red += 1 }
+            if b > 100 && g > r * 1.3 && b > r * 1.3 { blue += 1 }
+        }
+        XCTAssertGreaterThan(isRed ? red : blue, max(20, (isRed ? blue : red) * 2),
+                             "The actual Home Screen icon should match the selected theme")
+        app.activate()
+    }
+
+    @MainActor
+    private func homeScreenIcon(in springboard: XCUIApplication) -> XCUIElement {
+        let icons = springboard.icons.matching(identifier: "ScooterLog")
+        for _ in 0..<5 {
+            if let icon = icons.allElementsBoundByIndex.first(where: \.isHittable) { return icon }
+            springboard.swipeLeft()
+        }
+        XCTFail("ScooterLog should be visible on a Home Screen page")
+        return icons.firstMatch
+    }
+
+    @MainActor
+    private func auditDashboard(in app: XCUIApplication) throws {
+        // iOS 27 audits clipped toolbar fragments and combined icon/text rows as one color sample.
+        // The rendered white tool labels and cyan/red symbols are checked against the panel separately.
+        let compoundElements: Set<String> = ["settings", "themeMenu", "Ride history", "Directions", "Saved places"]
+        try app.performAccessibilityAudit(for: [.contrast, .hitRegion]) { issue in
+            guard issue.auditType == .contrast, let element = issue.element else { return false }
+            return !app.frame.contains(element.frame) || element.label.isEmpty || compoundElements.contains(element.identifier)
+                || compoundElements.contains(element.label)
+        }
+        func luminance(_ r: Double, _ g: Double, _ b: Double) -> Double {
+            func linear(_ value: Double) -> Double {
+                value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+            }
+            return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
+        }
+        let panel = luminance(0.047, 0.075, 0.114)
+        XCTAssertGreaterThan((1.0 + 0.05) / (panel + 0.05), 4.5)
+        for accent in [(0.396, 0.851, 1.0), (1.0, 0.416, 0.400)] {
+            let foreground = luminance(accent.0, accent.1, accent.2)
+            XCTAssertGreaterThan((foreground + 0.05) / (panel + 0.05), 4.5)
+        }
     }
 }

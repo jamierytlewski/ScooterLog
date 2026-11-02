@@ -29,7 +29,9 @@ struct SavedPlacesView: View {
                 ForEach(controller.places.visible) { place in
                     #if os(iOS)
                     HStack(alignment: .top) {
+                        RideToolIcon(systemImage: "mappin.and.ellipse")
                         Text(place.name)
+                            .font(.headline)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                         Spacer()
@@ -54,6 +56,7 @@ struct SavedPlacesView: View {
             } header: {
                 Text("Saved places").foregroundStyle(RideTheme.secondaryText)
             }
+            .listRowBackground(RideTheme.panel)
             #if os(iOS)
             Section {
                 NavigationLink {
@@ -74,6 +77,7 @@ struct SavedPlacesView: View {
                     .font(.caption)
             }
         }
+        .rideSurface()
         .navigationTitle("Saved places")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)

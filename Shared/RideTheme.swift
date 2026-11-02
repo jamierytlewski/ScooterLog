@@ -6,9 +6,13 @@ enum RideTheme: String, CaseIterable, Identifiable, Codable {
 
     static let preferenceKey = "rideTheme"
     static let secondaryText = Color("RideSecondaryText")
+    static let canvas = Color("RideCanvas")
+    static let panel = Color("RidePanel")
+    static let artworkBackground = Color(red: 0.012, green: 0.035, blue: 0.075)
 
     static var selected: RideTheme {
-        UserDefaults.standard.string(forKey: preferenceKey).flatMap(RideTheme.init(rawValue:)) ?? .tronBlue
+        UserDefaults.standard.string(forKey: preferenceKey).flatMap(RideTheme.init(rawValue:))
+            ?? .tronBlue
     }
 
     var id: String { rawValue }
@@ -19,5 +23,64 @@ enum RideTheme: String, CaseIterable, Identifiable, Codable {
         case .tronBlue: "Tron blue"
         case .aresRed: "Ares red"
         }
+    }
+}
+extension View {
+    func rideSurface() -> some View {
+        #if os(iOS)
+            self
+                .scrollContentBackground(.hidden)
+                .background(RideTheme.canvas)
+        #else
+            self
+        #endif
+    }
+}
+/// The icon's illustrated trail is brand artwork, never a recorded route.
+struct ScooterArtwork: View {
+    let theme: RideTheme
+
+    var body: some View {
+        GeometryReader { geometry in
+            let side = min(geometry.size.width, geometry.size.height * 1.35)
+            Image(theme == .tronBlue ? "ScooterBlue" : "ScooterRed")
+                .resizable()
+                .scaledToFill()
+                .frame(width: side, height: side)
+                .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+        }
+        .clipped()
+        .background(RideTheme.artworkBackground)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+struct RidePrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.headline)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .foregroundStyle(Color("OnRideAccent"))
+            .background(.tint, in: Capsule())
+            .opacity(isEnabled ? (configuration.isPressed ? 0.78 : 1) : 0.45)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: configuration.isPressed)
+    }
+}
+struct RideToolIcon: View {
+    let systemImage: String
+    @AppStorage(RideTheme.preferenceKey) private var theme: RideTheme = .tronBlue
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(.body.weight(.semibold))
+            .foregroundStyle(theme.color)
+            .frame(width: 40, height: 40)
+            .background(theme.color.opacity(0.10), in: .rect(cornerRadius: 12))
+            .accessibilityHidden(true)
     }
 }

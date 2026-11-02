@@ -11,6 +11,15 @@
 <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
 <key>LSRequiresIPhoneOS</key><true/>
 <key>UILaunchScreen</key><dict/>
+<key>UIApplicationShortcutItems</key>
+<array>
+    <dict>
+        <key>UIApplicationShortcutItemType</key><string>com.scooterlog.startRide</string>
+        <key>UIApplicationShortcutItemTitle</key><string>Start ride</string>
+        <key>UIApplicationShortcutItemSubtitle</key><string>Record on this iPhone</string>
+        <key>UIApplicationShortcutItemIconSymbolName</key><string>play.circle.fill</string>
+    </dict>
+</array>
 <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
 <key>NSLocationWhenInUseUsageDescription</key><string>ScooterLog uses your current location to plan directions and records your route and timing only when you start a ride.</string>
 <key>NSHealthShareUsageDescription</key><string>Optionally show available heart-rate samples during your ride. No workouts or health data are written.</string>

@@ -638,6 +638,7 @@ struct DirectionsView: View {
                         }
                     }
                     .frame(height: 240)
+                    .clipShape(.rect(cornerRadius: 16))
                     .accessibilityLabel("Route preview")
                     .accessibilityHint("Pinch to zoom. Choose an alternative using the route list below.")
                     .accessibilityIdentifier("routePreview")
@@ -647,7 +648,7 @@ struct DirectionsView: View {
                         } label: {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(route.name).foregroundStyle(Color.primary)
+                                    Text(route.name).font(.headline).foregroundStyle(Color.primary)
                                     Text("\(RideUnits.distance(route.distance)) · \(duration(route.expectedTravelTime)) \(mode.rawValue.lowercased())")
                                         .font(.subheadline).foregroundStyle(RideTheme.secondaryText)
                                 }
@@ -709,6 +710,7 @@ struct DirectionsView: View {
                 Text("Manual directions").foregroundStyle(RideTheme.secondaryText)
             }
         }
+        .rideSurface()
         .navigationTitle("Directions")
         .onChange(of: mode) { refresh() }
         .onChange(of: model.selectedRouteID) { camera = .automatic }
@@ -910,12 +912,14 @@ private struct TurnByTurnView: View {
                     }
                     .padding()
                 }
+                .background(RideTheme.panel)
                 .frame(maxHeight: 360)
             } else {
                 ContentUnavailableView("Route unavailable", systemImage: "map",
                                        description: Text(model.guidanceError ?? "Choose a route before starting directions."))
             }
         }
+        .background(RideTheme.canvas)
         .navigationTitle("Turn-by-turn")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)

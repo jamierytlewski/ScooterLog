@@ -33,10 +33,15 @@ struct RideDashboard: View {
     @State private var confirmForget = false
     @State private var confirmLiveHR = false
     @State private var showSettings = false
+    @State private var navigationID = UUID()
+    @State private var showActiveRideNotice = false
+    #if os(iOS)
+    @ObservedObject private var homeScreen = HomeScreenActions.shared
+    #endif
     @AppStorage(RideTheme.preferenceKey) private var theme: RideTheme = .tronBlue
-    @ScaledMetric(relativeTo: .largeTitle) private var scooterSymbolSize = 56
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -45,23 +50,16 @@ struct RideDashboard: View {
                 Section {
                     if dynamicTypeSize.isAccessibilitySize { controls }
                     if controller.displayedRide == nil {
-                        VStack(alignment: .leading, spacing: 16) {
-                            if !dynamicTypeSize.isAccessibilitySize {
-                                Image(systemName: "scooter")
-                                    .font(.system(size: scooterSymbolSize, weight: .medium))
-                                    .foregroundStyle(theme.color)
-                                    .accessibilityHidden(true)
-                            }
-                            Text("Your next ride starts here.")
-                                .font(.title2.bold())
-                                .fixedSize(horizontal: false, vertical: true)
-                            Text("GPS tracking for your Segway F3. No scooter connection needed.")
-                                .font(.subheadline).foregroundStyle(RideTheme.secondaryText)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .fixedSize(horizontal: false, vertical: true)
+                        rideIntroduction
+                            .listRowInsets(EdgeInsets())
+                            #if os(iOS)
+                            .listRowSeparator(.hidden)
+                            #endif
                     }
                     if !dynamicTypeSize.isAccessibilitySize { controls }
+                    #if os(watchOS)
+                    if controller.displayedRide == nil { rideIntroductionCopy }
+                    #endif
                     if let ride = controller.displayedRide {
                         TimelineView(.periodic(from: .now, by: 1)) { context in
                             rideContent(ride, now: context.date)
@@ -107,6 +105,7 @@ struct RideDashboard: View {
                 } header: {
                     Text("Ride tools").foregroundStyle(RideTheme.secondaryText)
                 }
+                .listRowBackground(RideTheme.panel)
                 #if os(iOS)
                 if controller.locationAuthorization != .authorizedWhenInUse
                     && controller.locationAuthorization != .authorizedAlways {
@@ -119,9 +118,11 @@ struct RideDashboard: View {
                 appearanceSection
                 #endif
             }
+            .rideSurface()
             .navigationTitle("ScooterLog")
             #if os(iOS)
-            .listStyle(.insetGrouped)
+            .listStyle(.plain)
+            .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20))
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -145,6 +146,7 @@ struct RideDashboard: View {
                         healthSection
                         CloudSyncView(controller: controller, cloud: cloud)
                     }
+                    .rideSurface()
                     .navigationTitle("Settings")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
@@ -154,6 +156,13 @@ struct RideDashboard: View {
                     }
                 }
                 .tint(theme.color)
+            }
+            .onAppear { handleHomeScreenStart() }
+            .onChange(of: homeScreen.startRequested) { handleHomeScreenStart() }
+            .alert("A ride is already active", isPresented: $showActiveRideNotice) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Continue it here or end it on its recording device before starting a new ride.")
             }
             #endif
             .confirmationDialog("End and save this ride?", isPresented: $confirmEnd, titleVisibility: .visible) {
@@ -168,6 +177,9 @@ struct RideDashboard: View {
                 if phase == .active {
                     health.refresh()
                     controller.refreshConnection()
+                    #if os(iOS)
+                    handleHomeScreenStart()
+                    #endif
                 }
             }
             .alert("Forget offline status?", isPresented: $confirmForget) {
@@ -188,7 +200,62 @@ struct RideDashboard: View {
             }
             #endif
         }
+        .id(navigationID)
         .tint(theme.color)
+    }
+
+    #if os(iOS)
+    private func handleHomeScreenStart() {
+        guard UIApplication.shared.applicationState == .active, homeScreen.startRequested else { return }
+        showSettings = false
+        navigationID = UUID()
+        homeScreen.startRequested = false
+        guard controller.displayedRide == nil else {
+            showActiveRideNotice = true
+            return
+        }
+        controller.perform { try controller.start() }
+    }
+    #endif
+
+    private var rideIntroduction: some View {
+        Group {
+            #if os(iOS)
+            if verticalSizeClass == .compact && !dynamicTypeSize.isAccessibilitySize {
+                HStack(spacing: 20) {
+                    ScooterArtwork(theme: theme).frame(width: 240, height: 180)
+                    rideIntroductionCopy
+                }
+                .padding(.horizontal, 20)
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    if !dynamicTypeSize.isAccessibilitySize {
+                        ScooterArtwork(theme: theme).frame(height: 260)
+                    }
+                    rideIntroductionCopy
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
+                        .padding(.top, dynamicTypeSize.isAccessibilitySize ? 20 : 0)
+                }
+            }
+            #else
+            if !dynamicTypeSize.isAccessibilitySize {
+                ScooterArtwork(theme: theme).frame(height: 120)
+            }
+            #endif
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RideTheme.artworkBackground)
+    }
+
+    private var rideIntroductionCopy: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Your next ride starts here.")
+                .font(.system(.title2, design: .rounded, weight: .bold))
+                .foregroundStyle(.white)
+                .accessibilityAddTraits(.isHeader)
+        }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var themePicker: some View {
@@ -211,9 +278,13 @@ struct RideDashboard: View {
         Label {
             Text(title).fixedSize(horizontal: false, vertical: true)
         } icon: {
-            Image(systemName: systemImage)
-                .accessibilityHidden(true)
+            #if os(iOS)
+            RideToolIcon(systemImage: systemImage)
+            #else
+            Image(systemName: systemImage).foregroundStyle(theme.color).accessibilityHidden(true)
+            #endif
         }
+        .font(.headline)
         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(title))
@@ -269,8 +340,17 @@ struct RideDashboard: View {
                 .accessibilityLabel("Elapsed time")
                 .accessibilityValue(RideFormat.spokenDuration(ride.elapsed(at: now)))
                 .accessibilityIdentifier("elapsedTime")
-            RideMetric("Current speed", value: RideFormat.speed(ride.currentSpeed(at: now)))
-            RideMetric("Distance", value: RideFormat.distance(ride.distance))
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 24) {
+                    instrument("Current speed", value: RideFormat.speed(ride.currentSpeed(at: now)))
+                    Spacer(minLength: 0)
+                    instrument("Distance", value: RideFormat.distance(ride.distance))
+                }
+                VStack(alignment: .leading, spacing: 16) {
+                    instrument("Current speed", value: RideFormat.speed(ride.currentSpeed(at: now)))
+                    instrument("Distance", value: RideFormat.distance(ride.distance))
+                }
+            }
             Divider()
             RideMetric("Moving", seconds: ride.movingDuration)
             RideMetric("Stopped estimate", seconds: stopped)
@@ -293,6 +373,22 @@ struct RideDashboard: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
+    private func instrument(_ title: LocalizedStringKey, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(value)
+                .font(.system(.title2, design: .rounded, weight: .bold))
+                .monospacedDigit()
+                .fixedSize()
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(RideTheme.secondaryText)
+                .fixedSize()
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(title))
+        .accessibilityValue(value)
+    }
+
     @ViewBuilder private var controls: some View {
         if controller.displayedRide == nil {
 #if os(watchOS)
@@ -301,6 +397,7 @@ struct RideDashboard: View {
                 startRideButton
                 Spacer(minLength: 0)
             }
+            .listRowBackground(Color.clear)
 #else
             startRideButton
 #endif
@@ -309,13 +406,14 @@ struct RideDashboard: View {
                 Button { controller.perform { try controller.start() } } label: {
                     actionLabel("Resume recording", systemImage: "play.fill")
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(RidePrimaryButtonStyle())
                 .foregroundStyle(Color("OnRideAccent"))
             }
             Button(role: .destructive) { confirmEnd = true } label: {
                 actionLabel(controller.commandPending ? "Waiting for owner..." : "End ride", systemImage: "stop.fill")
             }
                 .buttonStyle(.bordered)
+                .tint(.red)
                 .disabled(controller.commandPending || (controller.isRemote && !controller.reachable))
         }
     }
@@ -328,8 +426,9 @@ struct RideDashboard: View {
             actionLabel("Start ride here", systemImage: "play.fill")
 #endif
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(RidePrimaryButtonStyle())
         .foregroundStyle(Color("OnRideAccent"))
+        .listRowBackground(Color.clear)
     }
 
     private func actionLabel(
@@ -467,6 +566,7 @@ struct HistoryView: View {
 
     var body: some View {
         list
+            .rideSurface()
             .navigationTitle("History")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -522,6 +622,7 @@ struct HistoryView: View {
         }
         ForEach(controller.archive.completed) { ride in
             row(for: ride)
+                .listRowBackground(RideTheme.panel)
                 .accessibilityIdentifier("rideRow")
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     // Not `.destructive`: that role animates the row away and drops a dialog attached to it.
@@ -605,11 +706,21 @@ private struct RideRow: View {
     let ride: Ride
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(ride.startedAt, format: .dateTime.month().day().hour().minute())
-            Text("\(RideFormat.distance(ride.distance)) • \(RideFormat.duration(ride.elapsed(at: .now)))")
-                .font(.subheadline).foregroundStyle(RideTheme.secondaryText)
+        HStack(spacing: 14) {
+            #if os(iOS)
+            RideToolIcon(systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+            #endif
+            VStack(alignment: .leading, spacing: 6) {
+                Text(RideFormat.distance(ride.distance))
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+                    .monospacedDigit()
+                Text(ride.startedAt, format: .dateTime.month().day().hour().minute())
+                    .font(.subheadline).foregroundStyle(RideTheme.secondaryText)
+                Text(RideFormat.duration(ride.elapsed(at: .now)))
+                    .font(.caption).monospacedDigit().foregroundStyle(RideTheme.secondaryText)
+            }
         }
+        .padding(.vertical, 6)
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .combine)
     }
@@ -638,14 +749,21 @@ struct RideDetail: View {
                         }
                     }
                     .frame(height: 220)
+                    .clipShape(.rect(cornerRadius: 16))
                     .accessibilityLabel("Recorded route")
                     .accessibilityHint("Route segments are separated where GPS data is missing.")
                 }
             }
+            .listRowBackground(RideTheme.panel)
             Section {
                 Text(ride.startedAt, format: .dateTime).font(.headline)
+                Text(RideFormat.distance(ride.distance))
+                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(.tint)
+                    .accessibilityLabel("Distance")
+                    .accessibilityValue(RideFormat.distance(ride.distance))
                 RideMetric("Recording owner", value: ride.owner)
-                RideMetric("Distance", value: RideFormat.distance(ride.distance))
                 RideMetric("Elapsed", seconds: ride.elapsed(at: .now))
                 RideMetric("Moving", seconds: ride.movingDuration)
                 RideMetric("Stopped estimate", seconds: ride.stoppedDuration)
@@ -655,6 +773,7 @@ struct RideDetail: View {
             } header: {
                 Text("Ride summary").foregroundStyle(RideTheme.secondaryText)
             }
+            .listRowBackground(RideTheme.panel)
             #if !os(iOS)
             Section {
                 Button("Delete ride", role: .destructive) { confirmDeletion = true }
@@ -662,6 +781,7 @@ struct RideDetail: View {
             }
             #endif
         }
+        .rideSurface()
         .navigationTitle("Ride")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
