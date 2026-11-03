@@ -1,0 +1,54 @@
+:root {
+  color-scheme: light dark;
+  --canvas: #f3f6fa;
+  --ink: #152b42;
+  --muted: #435b72;
+  --accent: #006a8c;
+  --rule: #bacbd9;
+  --focus: #006a8c;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--canvas); color: var(--ink); line-height: 1.7; }
+a { color: var(--accent); text-underline-offset: 0.2em; overflow-wrap: anywhere; }
+a:hover { text-decoration-thickness: 0.15em; }
+a:focus-visible { outline: 3px solid var(--focus); outline-offset: 5px; border-radius: 2px; }
+.skip-link { position: absolute; top: -6rem; left: 1rem; padding: 0.75rem; background: var(--canvas); }
+.skip-link:focus { top: 0.5rem; }
+.shell { max-width: 76ch; margin-inline: auto; padding-inline: clamp(1.25rem, 5vw, 3rem); }
+header { border-bottom: 1px solid var(--rule); }
+header nav { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1.5rem; padding-block: 1.25rem; }
+header nav a { display: inline-flex; align-items: center; min-height: 44px; }
+.brand { color: var(--ink); font-size: 1.35rem; font-weight: 750; text-decoration: none; margin-right: auto; }
+header nav [aria-current="page"] { font-weight: 700; text-decoration-thickness: 0.15em; }
+main { padding-block: clamp(2.5rem, 7vw, 5rem); }
+h1, h2, h3 { line-height: 1.2; text-wrap: balance; }
+h1 { font-size: clamp(2.25rem, 7vw, 3.75rem); letter-spacing: -0.035em; margin: 0 0 1.25rem; }
+h2 { font-size: 1.45rem; margin: 2.75rem 0 0.75rem; }
+h3 { font-size: 1.1rem; margin: 1.75rem 0 0.5rem; }
+p, ul, ol { margin: 0 0 1.1rem; }
+ul, ol { padding-left: 1.5rem; }
+li { margin-block: 0.5rem; padding-left: 0.2rem; }
+.lead { font-size: 1.2rem; color: var(--muted); }
+.updated, footer { font-size: 0.95rem; color: var(--muted); }
+.contents { padding-block: 1rem; border-block: 1px solid var(--rule); margin-block: 2rem; }
+.contents p { margin-bottom: 0.5rem; font-weight: 650; }
+.contents ul { margin-bottom: 0; }
+.resources { list-style: none; padding: 0; margin-top: 2.5rem; border-top: 1px solid var(--rule); }
+.resources li { padding: 1.5rem 0; margin: 0; border-bottom: 1px solid var(--rule); }
+.resources a { font-size: 1.35rem; font-weight: 650; }
+.resources p { margin: 0.4rem 0 0; color: var(--muted); }
+footer { border-top: 1px solid var(--rule); padding-block: 1.5rem 2.5rem; }
+footer p { margin-bottom: 0.5rem; }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #071321;
+    --ink: #edf4fa;
+    --muted: #b6cadd;
+    --accent: #63dcf5;
+    --rule: #3a526a;
+    --focus: #63dcf5;
+  }
+}

@@ -37,6 +37,7 @@ struct RideDashboard: View {
     @State private var confirmForget = false
     @State private var confirmLiveHR = false
     @State private var showSettings = false
+    @State private var informationError: String?
     @State private var navigationID = UUID()
     @State private var showActiveRideNotice = false
     #if os(iOS)
@@ -87,6 +88,7 @@ struct RideDashboard: View {
                 locationSection
                 healthSection
                 appearanceSection
+                privacyAndSupportSection
                 #endif
             }
             .rideSurface()
@@ -116,6 +118,7 @@ struct RideDashboard: View {
                         locationSection
                         healthSection
                         CloudSyncView(controller: controller, cloud: cloud)
+                        privacyAndSupportSection
                     }
                     .rideSurface()
                     .navigationTitle("Settings")
@@ -356,6 +359,54 @@ struct RideDashboard: View {
         } header: {
             Text("Location").foregroundStyle(RideTheme.secondaryText)
         }
+    }
+
+    private var privacyAndSupportSection: some View {
+        Section {
+            Button("Privacy policy", systemImage: "hand.raised") {
+                openInformationURL("https://scooterlog.j4m13.dev/privacy/")
+            }
+            .accessibilityIdentifier("privacyPolicy")
+            Button("Support", systemImage: "questionmark.circle") {
+                openInformationURL("https://scooterlog.j4m13.dev/support/")
+            }
+            .accessibilityIdentifier("supportWebsite")
+            Button("Email support", systemImage: "envelope") {
+                openInformationURL("mailto:privacy@j4m13.dev")
+            }
+            .accessibilityIdentifier("supportEmail")
+            Text("privacy@j4m13.dev")
+                .font(.footnote)
+                .foregroundStyle(RideTheme.secondaryText)
+            #if os(watchOS)
+            Text("If a link does not open, visit scooterlog.j4m13.dev on your iPhone.")
+                .font(.footnote)
+                .foregroundStyle(RideTheme.secondaryText)
+            #endif
+            if let informationError {
+                notice(informationError)
+                    .accessibilityIdentifier("informationError")
+            }
+        } header: {
+            Text("Privacy & support").foregroundStyle(RideTheme.secondaryText)
+        }
+    }
+
+    private func openInformationURL(_ address: String) {
+        informationError = nil
+        guard let url = URL(string: address) else {
+            informationError = "This address is unavailable. Contact privacy@j4m13.dev."
+            return
+        }
+        #if os(watchOS)
+        openURL(url)
+        #else
+        openURL(url) { opened in
+            if !opened {
+                informationError = "Could not open \(address). Open it on your iPhone or contact privacy@j4m13.dev."
+            }
+        }
+        #endif
     }
 
     #if os(iOS)

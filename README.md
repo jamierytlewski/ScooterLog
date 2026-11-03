@@ -6,6 +6,31 @@ A native, local-first iPhone and Apple Watch scooter ride logger. Built for a Se
 
 The phone target is **iPhone-only**; there is no dedicated iPad interface. The Apple Watch companion remains supported.
 
+## License, contributions, and privacy
+
+ScooterLog is available under the [MIT license](LICENSE). See
+[CONTRIBUTING.md](CONTRIBUTING.md) for bug reports, focused pull requests,
+AI-assisted contributions, and protecting private ride data in public discussions.
+
+The static privacy/support site is in `docs/`, intended for
+`https://scooterlog.j4m13.dev/`. Both apps provide **Privacy & support** links
+(in Settings on iPhone, on the dashboard on watch). Public contact:
+`privacy@j4m13.dev`. Publishing files does not create that mailbox.
+See [App Store privacy setup](Configuration/AppStorePrivacy.md) for proposed
+disclosures and the checks required before submission.
+
+To publish with GitHub Pages, push the reviewed site files, enable Pages from
+the `main` branch's `/docs` folder, and set the custom domain to
+`scooterlog.j4m13.dev`. At your DNS provider, create a **CNAME** named
+`scooterlog` pointing to **`jamierytlewski.github.io`** (not a repository URL).
+Do not change the root domain or other subdomains. GitHub must provision a valid
+certificate; then enable **Enforce HTTPS** and verify `/`, `/privacy/`, and
+`/support/` without authentication before submitting a build with these links.
+The committed `docs/CNAME` preserves the custom domain on later site updates.
+GitHub Pages publishes the website, not the Swift source files outside `docs/`.
+Repository visibility is a separate setting; making this repository public also
+exposes its reachable commit history.
+
 ## What works in this starter
 
 | Component | Implemented behavior |

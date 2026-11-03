@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="How ScooterLog handles location, HealthKit, Apple Maps, optional private iCloud sync, and support requests.">
+  <title>Privacy Policy — ScooterLog</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header>
+    <nav class="shell" aria-label="Main navigation">
+      <a class="brand" href="../">ScooterLog</a>
+      <a href="./" aria-current="page">Privacy</a>
+      <a href="../support/">Support</a>
+    </nav>
+  </header>
+  <main class="shell" id="main">
+    <h1>Privacy policy</h1>
+    <p class="updated">Last updated: November 2, 2026</p>
+    <p class="lead">Recording a ride does not require a ScooterLog account. Your ride history is stored on your devices. Private iCloud sync and heart-rate access are optional.</p>
+    <p>This policy covers the ScooterLog iPhone and Apple Watch apps and this support website. ScooterLog is maintained by <a href="https://github.com/jamierytlewski">jamierytlewski</a>. For privacy questions or requests, email <a href="mailto:privacy@j4m13.dev">privacy@j4m13.dev</a>.</p>
+    <nav class="contents" aria-label="Policy sections">
+      <p>In this policy</p>
+      <ul>
+        <li><a href="#location">Location and ride history</a></li>
+        <li><a href="#health">Optional heart rate</a></li>
+        <li><a href="#maps">Apple Maps and directions</a></li>
+        <li><a href="#icloud">Optional private iCloud sync</a></li>
+        <li><a href="#choices">Sharing, retention, and deletion</a></li>
+        <li><a href="#contact">Support, website, and contact</a></li>
+      </ul>
+    </nav>
+
+    <h2 id="location">Location and ride history</h2>
+    <p>With your permission, ScooterLog uses precise location to record a ride you start. It stores accepted GPS coordinates, timestamps, accuracy and speed readings, a ride identifier, the recording device type, and ride timing and distance. Recording can continue in the background until you end the ride or recording is interrupted. When you open the app again, a previously requested recording may resume if permission is still available.</p>
+    <p>Route planning can request a foreground location fix before you start a ride. Previewing a route does not itself save a recorded ride. Saved places contain the names you choose and their coordinates.</p>
+    <p>Rides and saved places are stored in the app's local storage. ScooterLog uses Apple's WatchConnectivity service to exchange live ride status, current guidance, completed rides, saved places, and deletion information between your paired phone and watch. Live Activities show selected ride metrics on system surfaces such as the Lock Screen and Smart Stack. Consider those surfaces when choosing your device's privacy settings.</p>
+    <p>The app does not send your ride history to a developer-operated server. It does not use advertising, third-party analytics, or cross-app tracking, and does not sell your information.</p>
+
+    <h2 id="health">Optional heart rate</h2>
+    <p>Heart-rate access is off until you choose to enable it and authorize HealthKit access. The app can show a recent readable heart-rate sample and its measurement time. This does not guarantee continuous or current readings.</p>
+    <p>On Apple Watch, a separately confirmed live-heart-rate option starts an <strong>Other workout session</strong> to obtain sensor readings. ScooterLog ends that session and discards its workout builder without saving a completed workout. watchOS may nevertheless retain Health samples or affect activity rings. Ending GPS recording also ends this optional session.</p>
+    <p>ScooterLog does not include heart-rate readings in ride files, companion transfers, iCloud uploads, or JSON/GPX exports. It does not send Health data to the developer or use it for advertising. You can turn the display off in the app and manage or revoke Health permissions in Apple's Health or Settings apps. Health information already retained by watchOS is managed separately there. ScooterLog is not a medical, diagnostic, or emergency-monitoring service.</p>
+
+    <h2 id="maps">Apple Maps and directions</h2>
+    <p>Maps, place search, route calculation, and rerouting use Apple's MapKit services. Place search sends the text you type, including partial text for suggestions, and, when available, a search area near your last known location to Apple. Directions send the selected origin, destination, and routing mode. Rerouting can send an updated origin based on your current location. Displaying maps also involves requests to Apple.</p>
+    <p>These requests are necessary to provide the features you use and are handled under <a href="https://www.apple.com/legal/privacy/data/en/apple-maps/">Apple's Maps privacy information</a> and <a href="https://www.apple.com/legal/privacy/">Apple's privacy policy</a>. They do not upload your entire saved ride archive to the developer. Walking and cycling routes are not a guarantee of scooter access, legality, or safety.</p>
+
+    <h2 id="icloud">Optional private iCloud sync</h2>
+    <p>On iPhone, you can enable <strong>Sync rides and saved places</strong> and tap <strong>Sync now</strong>. This uploads completed ride files, including their recorded locations and timing, and saved-place names, coordinates, and place-deletion information to your private CloudKit database in your Apple iCloud account. It also downloads your saved cloud records. Active rides and Health data are excluded. The watch syncs with the phone rather than directly with CloudKit.</p>
+    <p>This is manual sync, not a continuous background backup. The developer does not have access to your private CloudKit records through the app's normal developer tools. Apple operates iCloud under its own terms and privacy policy. Do not interpret private storage as a promise of end-to-end encryption.</p>
+    <p>Turning sync off stops future sync operations; an operation already submitted may finish. Turning sync off does not delete records already in iCloud.</p>
+
+    <h2 id="choices">Sharing, retention, and deletion</h2>
+    <h3>Exporting rides</h3>
+    <p><strong>History &gt; Download all activities</strong> prepares completed rides as JSON and GPX files and opens the system share sheet. These files contain sensitive route coordinates and times, but not heart-rate data. Only share them with people and services you trust. Copies you save or send are controlled by you and the receiving service; deleting a ride in ScooterLog does not erase exported copies.</p>
+    <h3>Local data and permissions</h3>
+    <p>The app retains local rides and saved places until you delete them or remove the app's data. Delete a ride from History; the app asks the paired device to delete its copy and, when iCloud sync is enabled, removes the cloud ride on a subsequent sync. A small ride-deletion marker remains locally to prevent accidental reimport from the companion. Saved-place deletion information may also be retained and synced to prevent deleted places reappearing.</p>
+    <p>You can revoke location access in device Settings. This prevents authorized location recording but does not erase existing history. Removing the app from each device removes its local app storage; deleting only the phone app may leave a watch copy. Device and iCloud backups are managed separately by Apple and your backup settings.</p>
+    <h3>Cloud deletion</h3>
+    <p><strong>Delete private iCloud data</strong> removes this app's ride and saved-place records from your private CloudKit database and turns app sync off after success. It does not erase local or watch copies. Re-enabling sync can upload those copies again. Remove unwanted local copies as well.</p>
+    <p>Ride-deletion markers are not synced through iCloud. A different iPhone with a remaining local copy can upload that ride again. Delete it on each device that holds it. To remove all copies under your control, delete cloud data first, remove local copies on each device, and separately manage exports and backups.</p>
+
+    <h2 id="contact">Support requests and this website</h2>
+    <p>If you email support, the developer receives your email address and the message or attachments you choose to send, processed through email providers. This information is used to respond, troubleshoot, and handle privacy requests, not for advertising. Correspondence is kept as needed to resolve the request and meet applicable legal obligations. Ask for deletion by emailing <a href="mailto:privacy@j4m13.dev">privacy@j4m13.dev</a>; records that must legally be retained may be excluded. Do not send passwords, Health records, or unredacted home/work routes.</p>
+    <p>GitHub issues and pull requests are public. Avoid posting personal information there. This website is hosted on GitHub Pages; GitHub may process technical request information such as IP addresses for hosting and security under the <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub privacy statement</a>. This site adds no analytics scripts, advertising, cookies, or contact forms.</p>
+    <p>Apple may provide diagnostics and beta feedback according to your Apple sharing settings and TestFlight's terms. If you send feedback or reports to the developer, include only what is needed and redact personal details. TestFlight is a separate Apple service.</p>
+    <h3>Your requests and policy changes</h3>
+    <p>Depending on your jurisdiction, you may have rights to access, correct, or delete personal information handled by the developer, and other privacy rights. Contact the address below to make a request. The developer cannot directly retrieve or erase records that exist only on your devices or in your private iCloud database; use the controls described above for those copies.</p>
+    <p>This policy will be updated if the app's practices change. The date at the top identifies the latest revision. Review the policy again when enabling new features.</p>
+    <p><strong>Privacy and support contact:</strong> <a href="mailto:privacy@j4m13.dev">privacy@j4m13.dev</a></p>
+  </main>
+  <footer class="shell">
+    <p><a href="../support/">Get support</a> · <a href="../">ScooterLog home</a></p>
+    <p>ScooterLog is an independent project, not affiliated with Apple or any scooter manufacturer.</p>
+  </footer>
+</body>
+</html>

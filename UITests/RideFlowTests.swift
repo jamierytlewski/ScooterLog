@@ -105,6 +105,24 @@ final class RideFlowTests: XCTestCase {
     }
 
     @MainActor
+    func testPrivacyAndSupportAreAvailableInSettings() throws {
+        let app = XCUIApplication()
+        app.launch()
+        app.buttons["settings"].tap()
+        for identifier in ["privacyPolicy", "supportWebsite", "supportEmail"] {
+            let button = app.buttons[identifier]
+            reveal(button, in: app)
+            XCTAssertTrue(button.exists)
+            XCTAssertTrue(button.isHittable)
+        }
+        XCTAssertTrue(app.staticTexts["privacy@j4m13.dev"].exists)
+        app.buttons["Done"].tap()
+        app.buttons["settings"].tap()
+        reveal(app.buttons["privacyPolicy"], in: app)
+        XCTAssertTrue(app.buttons["privacyPolicy"].isHittable)
+    }
+
+    @MainActor
     func testSettingsStateSurvivesDismissal() throws {
         let app = XCUIApplication()
         app.launch()

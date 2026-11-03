@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Get help with ScooterLog recording, Apple Watch sync, directions, ride exports, and data deletion.">
+  <title>Support — ScooterLog</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header>
+    <nav class="shell" aria-label="Main navigation">
+      <a class="brand" href="../">ScooterLog</a>
+      <a href="../privacy/">Privacy</a>
+      <a href="./" aria-current="page">Support</a>
+    </nav>
+  </header>
+  <main class="shell" id="main">
+    <h1>Help with your ride.</h1>
+    <p class="lead">For support or privacy questions, email <a href="mailto:privacy@j4m13.dev">privacy@j4m13.dev</a>. Please stop safely before troubleshooting while riding.</p>
+    <h2>Recording and location</h2>
+    <p>Open ScooterLog on the device that will record, allow precise location, then choose <strong>Start ride here</strong>. For a watch-owned ride, start on the watch. GPS may be unreliable indoors or near tall buildings. Missing or rejected GPS intervals remain unknown rather than being presented as reliable movement.</p>
+    <p>If recording is interrupted, reopen the recording device's app and check its status. A previously requested ride may resume automatically; a paused or error-stopped ride may need <strong>Resume recording</strong>. A force quit can prevent background relaunch. Check that location permission is still enabled and end the ride when finished.</p>
+    <h2>Phone and Watch sync</h2>
+    <p>Start on only one device. The device that started the ride remains its recording owner. Live companion readings can be stale when disconnected. To end an unreachable ride, open the app on its recording device and end it there.</p>
+    <p>Completed rides transfer when the paired devices can communicate. Open both apps after reconnecting and check History. A manual resend action is available in History. Do not delete the original app or ride while troubleshooting a missing transfer.</p>
+    <h2>Directions and estimates</h2>
+    <p>You can plan before recording. Choose a destination and allow a current-location lookup, or search for a different starting point. Select walking or cycling, preview the route, then choose <strong>Start ride &amp; turn-by-turn</strong>. Search, route calculation, and rerouting require network access; cycling coverage varies by region.</p>
+    <p>Apple Maps walking/cycling routes are not scooter-specific legal routes. Check local rules and conditions. F3 energy and travel-time estimates are rough estimates, not measured battery readings or a guarantee of range.</p>
+    <h2>Heart rate</h2>
+    <p>Passive readings can be old or absent even while recording. HealthKit access is optional. The watch's separate live-heart-rate option uses an Other workout session and discards its completed workout results, but watchOS may still retain samples or affect rings. Turn off heart-rate display in the app and manage Health permissions separately in Health or Settings.</p>
+    <h2>iCloud sync</h2>
+    <p>On iPhone, enable <strong>Sync rides and saved places</strong>, then tap <strong>Sync now</strong>. Make sure you are signed into iCloud and have network access. Errors remain visible; retry after resolving the account or connection issue. Local recording does not require iCloud.</p>
+    <h2>Export or delete your data</h2>
+    <p>Use <strong>History &gt; Download all activities</strong> on iPhone to share completed rides as JSON and GPX files. These include route locations and times, so treat them as private.</p>
+    <p>Delete individual rides from History. To erase cloud records, use <strong>Delete private iCloud data</strong> in Settings. Cloud deletion does not delete local copies, and later sync may upload those copies again. Delete unwanted data on each device as well. See the <a href="../privacy/#choices">privacy policy's retention and deletion section</a> for companion copies, deletion markers, exports, and backups.</p>
+    <h2>Report a problem</h2>
+    <p>Include your app version/build, device model, iOS/watchOS version, steps to reproduce, and what you expected. For recording or sync problems, say which device owned the ride and whether the devices were connected.</p>
+    <p>Do not send Health records, passwords, or unredacted routes showing your home or work. A description or synthetic example is usually enough to start. For non-sensitive code issues, you can also use <a href="https://github.com/jamierytlewski/ScooterLog/issues">GitHub Issues</a>; everything posted there is public. There is no guaranteed response time for this independent project.</p>
+  </main>
+  <footer class="shell">
+    <p><a href="../privacy/">Privacy policy</a> · <a href="../">ScooterLog home</a></p>
+    <p>Support and privacy: <a href="mailto:privacy@j4m13.dev">privacy@j4m13.dev</a></p>
+  </footer>
+</body>
+</html>
