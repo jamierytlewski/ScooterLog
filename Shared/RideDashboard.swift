@@ -895,7 +895,13 @@ struct RideDetail: View {
     let ride: Ride
     @ObservedObject var controller: RideController
     @State private var confirmDeletion = false
-    @State private var showSpeedMap = false
+    @State private var showSpeedMap: Bool = {
+        #if DEBUG && targetEnvironment(simulator) && os(watchOS)
+        ProcessInfo.processInfo.environment["SCOOTERLOG_CAPTURE_SCREEN"] == "heat-map"
+        #else
+        false
+        #endif
+    }()
     @State private var visibleMapCamera: MapCamera?
     @Environment(\.dismiss) private var dismiss
 

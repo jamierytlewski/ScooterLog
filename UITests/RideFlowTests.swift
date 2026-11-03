@@ -7,6 +7,68 @@ final class RideFlowTests: XCTestCase {
     }
 
     @MainActor
+    func testCaptureSubmissionAssets() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["SCOOTERLOG_CAPTURE"] == "1",
+                          "Opt-in capture flow for an isolated simulator seeded with Tools/SeedSubmissionDemo.swift.")
+        let app = XCUIApplication()
+        app.launchArguments = ["-rideTheme", "TronBlue"]
+        app.launch()
+        XCTAssertTrue(app.buttons["Start ride here"].waitForExistence(timeout: 10))
+        submissionScene("01-dashboard")
+
+        openHistory(in: app)
+        XCTAssertEqual(app.buttons.matching(identifier: "rideRow").count, 3)
+        submissionScene("02-ride-history")
+        app.buttons.matching(identifier: "rideRow").firstMatch.tap()
+        let routeMap = app.descendants(matching: .any)["savedRideRouteMap"].firstMatch
+        XCTAssertTrue(routeMap.waitForExistence(timeout: 10))
+        submissionScene("03-recorded-route")
+
+        let heatMap = app.switches["speedHeatMap"]
+        heatMap.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertEqual(heatMap.value as? String, "1")
+        submissionScene("04-speed-heat-map")
+
+        app.navigationBars["Ride"].buttons.firstMatch.tap()
+        app.navigationBars["History"].buttons.firstMatch.tap()
+        reveal(app.buttons["Saved places"], in: app)
+        app.buttons["Saved places"].tap()
+        XCTAssertTrue(app.staticTexts["Little Island"].waitForExistence(timeout: 5))
+        submissionScene("05-saved-places")
+
+        app.navigationBars["Saved places"].buttons.firstMatch.tap()
+        reveal(app.buttons["Directions"], in: app)
+        app.buttons["Directions"].tap()
+        let mode = app.buttons["routeMode"]
+        reveal(mode, in: app)
+        mode.tap()
+        app.buttons["Walking"].tap()
+        let destination = app.buttons["Directions to Pier 57"]
+        reveal(destination, in: app, towardTop: true)
+        destination.tap()
+        let preview = app.descendants(matching: .any)["routePreview"].firstMatch
+        let routeReady = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label CONTAINS %@", "Choose a route below"),
+            object: app.staticTexts["directionsStatus"])
+        XCTAssertEqual(XCTWaiter.wait(for: [routeReady], timeout: 45), .completed,
+                       app.staticTexts["directionsStatus"].label)
+        reveal(preview, in: app)
+        XCTAssertTrue(preview.exists)
+        if preview.frame.maxY > app.frame.maxY - 60 { app.swipeUp() }
+        XCTAssertGreaterThan(preview.frame.minY, app.navigationBars["Directions"].frame.maxY)
+        XCTAssertLessThan(preview.frame.maxY, app.frame.maxY - 20)
+        submissionScene("06-route-planning")
+    }
+
+    @MainActor
+    private func submissionScene(_ name: String) {
+        Thread.sleep(forTimeInterval: 3)
+        capture(name)
+        print("APP_STORE_SCENE \(name) \(Date.now.timeIntervalSince1970)")
+        Thread.sleep(forTimeInterval: 5)
+    }
+
+    @MainActor
     func testStartRecoverEndAndHistory() throws {
         let app = XCUIApplication()
         app.launch()

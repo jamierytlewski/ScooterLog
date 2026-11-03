@@ -23,6 +23,7 @@
 <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
 <key>NSLocationWhenInUseUsageDescription</key><string>ScooterLog uses your current location to plan directions and records your route and timing only when you start a ride.</string>
 <key>NSHealthShareUsageDescription</key><string>Optionally show available heart-rate samples during your ride. No workouts or health data are written.</string>
+<key>NSHealthUpdateUsageDescription</key><string>ScooterLog does not write Health data on iPhone. On Apple Watch, workout permission enables an optional live heart-rate session. ScooterLog discards its workout results instead of saving a workout; watchOS may still create Health samples or ring effects.</string>
 <key>UIBackgroundModes</key><array><string>location</string></array>
 <key>NSSupportsLiveActivities</key><true/>
 <key>ScooterCloudContainer</key><string>$(CLOUDKIT_CONTAINER_IDENTIFIER)</string>
