@@ -2,8 +2,8 @@
   "id" : "37ca5ffd-2ee6-4452-b060-47a469f9c650",
   "targets" : [
     {
-      "id" : "9c701126-2884-4336-b5d7-b78e54f009a3",
-      "name" : "ScooterCore"
+      "id" : "c4f4fc1d-f5b5-4c8c-93a2-58679856e3cb",
+      "name" : "ScooterLog"
     }
   ]
 }
