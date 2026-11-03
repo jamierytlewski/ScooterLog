@@ -727,6 +727,7 @@ struct HistoryView: View {
             row(for: ride)
                 .ridePanelRow()
                 .accessibilityIdentifier("rideRow")
+                .accessibilityValue(ride.owner)
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     // Not `.destructive`: that role animates the row away and drops a dialog attached to it.
                     Button("Delete", systemImage: "trash") { rowDeletion = ride.id }
@@ -895,6 +896,7 @@ struct RideDetail: View {
     @ObservedObject var controller: RideController
     @State private var confirmDeletion = false
     @State private var showSpeedMap = false
+    @State private var visibleMapCamera: MapCamera?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -907,7 +909,7 @@ struct RideDetail: View {
                 } else {
                     Toggle("Speed heat map", isOn: $showSpeedMap)
                         .accessibilityIdentifier("speedHeatMap")
-                    Map {
+                    Map(initialPosition: visibleMapCamera.map { .camera($0) } ?? .automatic) {
                         if showSpeedMap {
                             ForEach(ride.speedSegments) { segment in
                                 MapPolyline(coordinates: coordinates(segment.samples))
@@ -919,10 +921,14 @@ struct RideDetail: View {
                             }
                         }
                     }
+                    // Replace MapKit's cached overlays without losing the visible camera.
+                    .id(showSpeedMap)
+                    .onMapCameraChange { visibleMapCamera = $0.camera }
                     .frame(height: 220)
                     .clipShape(.rect(cornerRadius: 16))
                     .accessibilityLabel(showSpeedMap ? "Recorded route coloured by GPS speed" : "Recorded route")
                     .accessibilityHint("Route segments are separated where GPS data is missing. Speed colours match the legend below.")
+                    .accessibilityIdentifier("savedRideRouteMap")
                     if showSpeedMap {
                         ForEach(RideSpeedBand.allCases, id: \.self) { band in
                             Label {
@@ -931,6 +937,7 @@ struct RideDetail: View {
                                 Image(systemName: "line.diagonal").foregroundStyle(band.color)
                             }
                             .accessibilityElement(children: .combine)
+                            .accessibilityIdentifier("speedLegend-\(band.rawValue)")
                         }
                         Text("Colours show recorded GPS speed, not an inferred speed across gaps.")
                             .font(.footnote).foregroundStyle(RideTheme.secondaryText)

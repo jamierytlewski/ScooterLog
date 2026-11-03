@@ -845,6 +845,7 @@ struct TurnByTurnView: View {
     @Binding var voiceGuidance: Bool
     @State private var camera = MapCameraPosition.automatic
     @State private var confirmEndRide = false
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(spacing: 0) {
@@ -960,6 +961,9 @@ struct TurnByTurnView: View {
         .onAppear {
             updateCamera()
             model.updateGuidance(from: controller.displayedRide?.samples.last)
+        }
+        .onChange(of: model.isGuiding) { _, guiding in
+            if !guiding { dismiss() }
         }
         .confirmationDialog("End this ride and save it?", isPresented: $confirmEndRide,
                             titleVisibility: .visible) {

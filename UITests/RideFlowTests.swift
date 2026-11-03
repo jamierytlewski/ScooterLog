@@ -315,7 +315,6 @@ final class RideFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons["endRideAndDirections"].waitForExistence(timeout: 5))
         app.buttons["endRideAndDirections"].tap()
         try confirm("End this ride and save it?", with: "End ride and save", in: app)
-        app.navigationBars["Turn-by-turn"].buttons.firstMatch.tap()
         XCTAssertTrue(app.buttons["Start ride here"].waitForExistence(timeout: 5),
                       "Ending navigation also ends the ride started with it")
     }
@@ -323,7 +322,7 @@ final class RideFlowTests: XCTestCase {
     @MainActor
     func testActivityDownloadAndSpeedHeatMap() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ScooterLogStubHistory"]
+        app.launchArguments = ["-ScooterLogStubHistory", "-rideTheme", "TronBlue"]
         app.launch()
         try endExistingRide(in: app)
         openHistory(in: app)
@@ -332,19 +331,47 @@ final class RideFlowTests: XCTestCase {
         XCTAssertTrue(download.isEnabled)
         download.tap()
         XCTAssertTrue(app.buttons["Close"].waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertTrue(app.buttons["Save to Files"].exists)
+        XCTAssertTrue(app.cells["Save to Files"].waitForExistence(timeout: 10))
         capture("Download all activities share sheet")
         app.buttons["Close"].firstMatch.tap()
 
-        let row = app.buttons.matching(identifier: "rideRow").firstMatch
+        let row = app.buttons.matching(identifier: "rideRow")
+            .matching(NSPredicate(format: "value == %@", "Export preview")).firstMatch
         reveal(row, in: app, towardTop: true)
         row.tap()
         let toggle = app.switches["speedHeatMap"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        let routeMap = app.descendants(matching: .any)["savedRideRouteMap"].firstMatch
+        XCTAssertTrue(routeMap.waitForExistence(timeout: 5))
+        let normalRedPixels = try redPixels(in: routeMap.screenshot().image)
         toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
-        XCTAssertTrue(app.staticTexts["Blue: under 5 mph"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Red: 15 mph or more"].exists)
+        XCTAssertEqual(toggle.value as? String, "1")
+        XCTAssertTrue(app.descendants(matching: .any)["speedLegend-slow"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["speedLegend-fast"].firstMatch.exists)
+        let speedRedPixels = try redPixels(in: routeMap.screenshot().image)
+        XCTAssertGreaterThan(speedRedPixels, normalRedPixels + 150,
+                             "Speed overlays must render after switching, without touching the map")
         capture("Recorded route speed heat map")
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertLessThan(try redPixels(in: routeMap.screenshot().image), speedRedPixels - 150,
+                          "Turning the heat map off must also refresh without a map gesture")
+    }
+
+    private func redPixels(in image: UIImage) throws -> Int {
+        let image = try XCTUnwrap(image.cgImage)
+        var pixels = [UInt8](repeating: 0, count: image.width * image.height * 4)
+        return try pixels.withUnsafeMutableBytes { buffer in
+            let context = try XCTUnwrap(CGContext(
+                data: buffer.baseAddress, width: image.width, height: image.height,
+                bitsPerComponent: 8, bytesPerRow: image.width * 4,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.premultipliedLast.rawValue))
+            context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+            let bytes = buffer.bindMemory(to: UInt8.self)
+            return stride(from: 0, to: bytes.count, by: 4).reduce(0) { count, index in
+                count + (bytes[index] > 180 && bytes[index + 1] < 140 && bytes[index + 2] < 130 ? 1 : 0)
+            }
+        }
     }
 
     @MainActor
