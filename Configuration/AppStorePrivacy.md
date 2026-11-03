@@ -17,7 +17,9 @@ After publishing and verifying HTTPS:
 | Marketing URL (optional) | `https://scooterlog.j4m13.dev/` |
 | Privacy Choices URL (optional) | `https://scooterlog.j4m13.dev/privacy/#choices` |
 
-Use `privacy@j4m13.dev` as the public support/privacy contact. This does not replace
+Use `privacy@j4m13.dev` as the public support/privacy contact. It forwards to the
+maintainer; replies currently use a different address, as disclosed on the site.
+This does not replace
 the private App Review contact details Apple requests. Confirm the mailbox can
 receive mail and that you can reply; neither DNS nor an HTML mail link creates it.
 
