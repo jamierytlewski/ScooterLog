@@ -3,6 +3,8 @@ import ScooterCore
 import SwiftUI
 #if os(iOS)
 import UIKit
+#elseif os(watchOS)
+import WidgetKit
 #endif
 
 enum RideFormat {
@@ -25,6 +27,8 @@ enum RideFormat {
 
 struct RideDashboard: View {
     @ObservedObject var controller: RideController
+    @ObservedObject private var directions: DirectionsModel
+    @AppStorage("directionsVoiceGuidance") private var voiceGuidance = true
     @StateObject private var health = HealthReader.shared
     #if os(iOS)
     @StateObject private var cloud = CloudRideSync()
@@ -44,36 +48,16 @@ struct RideDashboard: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.openURL) private var openURL
 
+    init(controller: RideController) {
+        self.controller = controller
+        directions = controller.directions
+    }
+
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    if dynamicTypeSize.isAccessibilitySize { controls }
-                    if controller.displayedRide == nil {
-                        rideIntroduction
-                            .listRowInsets(EdgeInsets())
-                            #if os(iOS)
-                            .listRowSeparator(.hidden)
-                            #endif
-                    }
-                    if !dynamicTypeSize.isAccessibilitySize { controls }
-                    #if os(watchOS)
-                    if controller.displayedRide == nil { rideIntroductionCopy }
-                    #endif
-                    if let ride = controller.displayedRide {
-                        TimelineView(.periodic(from: .now, by: 1)) { context in
-                            rideContent(ride, now: context.date)
-                        }
-                    }
-                } footer: {
-                    if controller.displayedRide == nil {
-                        Text("Start on one device only. Disconnected devices cannot coordinate starts.")
-                            .foregroundStyle(RideTheme.secondaryText)
-                    } else {
-                        Text("Stopped time is an estimate, not traffic-light detection. Missing GPS time is shown as unknown.")
-                            .foregroundStyle(RideTheme.secondaryText)
-                    }
-                }
+                guidanceSection
+                rideSection
                 if (controller.archive.active != nil && controller.peer?.ride != nil)
                     || (!controller.reachable && controller.peer?.ride != nil) || controller.errorMessage != nil {
                     Section {
@@ -92,20 +76,7 @@ struct RideDashboard: View {
                         Text("Needs attention").foregroundStyle(RideTheme.secondaryText)
                     }
                 }
-                Section {
-                    NavigationLink { HistoryView(controller: controller) } label: {
-                        toolLabel("Ride history", systemImage: "clock.arrow.circlepath")
-                    }
-                    NavigationLink { DirectionsView(controller: controller) } label: {
-                        toolLabel("Directions", systemImage: "arrow.turn.up.right")
-                    }
-                    NavigationLink { SavedPlacesView(controller: controller) } label: {
-                        toolLabel("Saved places", systemImage: "mappin.and.ellipse")
-                    }
-                } header: {
-                    Text("Ride tools").foregroundStyle(RideTheme.secondaryText)
-                }
-                .ridePanelRow()
+                toolsSection
                 #if os(iOS)
                 if controller.locationAuthorization != .authorizedWhenInUse
                     && controller.locationAuthorization != .authorizedAlways {
@@ -202,6 +173,82 @@ struct RideDashboard: View {
         }
         .id(navigationID)
         .tint(theme.color)
+        #if os(watchOS)
+        .onContinueUserActivity(NSUserActivityTypeLiveActivity) { _ in
+            navigationID = UUID()
+            controller.refreshConnection()
+        }
+        #endif
+    }
+
+    @ViewBuilder private var guidanceSection: some View {
+        if let guidance = controller.displayedGuidance {
+            Section {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    RideGuidanceSummary(guidance: guidance, now: context.date,
+                                        recording: controller.isRemote ? controller.peer?.recording == true : controller.recording)
+                }
+                NavigationLink("Live directions") {
+                    if controller.isRemote {
+                        CompanionDirectionsView(controller: controller)
+                    } else {
+                        TurnByTurnView(model: directions, controller: controller, voiceGuidance: $voiceGuidance)
+                    }
+                }
+            }
+            .ridePanelRow()
+            .id("live-guidance")
+        }
+    }
+
+    private var rideSection: some View {
+        Section {
+            if dynamicTypeSize.isAccessibilitySize { controls }
+            if controller.displayedRide == nil {
+                rideIntroduction
+                    .listRowInsets(EdgeInsets())
+                    #if os(iOS)
+                    .listRowSeparator(.hidden)
+                    #endif
+            }
+            if !dynamicTypeSize.isAccessibilitySize { controls }
+            #if os(watchOS)
+            if controller.displayedRide == nil { rideIntroductionCopy }
+            #endif
+            if let ride = controller.displayedRide {
+                TimelineView(.periodic(from: .now, by: 1)) { context in rideContent(ride, now: context.date) }
+            }
+        } footer: {
+            Text(controller.displayedRide == nil
+                 ? "Start on one device only. Disconnected devices cannot coordinate starts."
+                 : "Stopped time is an estimate, not traffic-light detection. Missing GPS time is shown as unknown.")
+                .foregroundStyle(RideTheme.secondaryText)
+        }
+        .id("ride-metrics")
+    }
+
+    private var toolsSection: some View {
+        Section {
+            NavigationLink { HistoryView(controller: controller) } label: {
+                toolLabel("Ride history", systemImage: "clock.arrow.circlepath")
+            }
+            NavigationLink {
+                if controller.isRemote {
+                    CompanionDirectionsView(controller: controller)
+                } else {
+                    DirectionsView(controller: controller)
+                }
+            } label: {
+                toolLabel("Directions", systemImage: "arrow.turn.up.right")
+            }
+            NavigationLink { SavedPlacesView(controller: controller) } label: {
+                toolLabel("Saved places", systemImage: "mappin.and.ellipse")
+            }
+        } header: {
+            Text("Ride tools").foregroundStyle(RideTheme.secondaryText)
+        }
+        .ridePanelRow()
+        .id("ride-tools")
     }
 
     #if os(iOS)
@@ -363,7 +410,7 @@ struct RideDashboard: View {
                 notice("Recovered ride: recording is paused. Resume in the foreground or end it. The gap stays unknown.",
                        systemImage: "pause.circle")
             } else if ride.currentSpeed(at: now) == nil {
-                notice("Waiting for a fresh GPS fix.", systemImage: "location.magnifyingglass")
+                notice(controller.locationStatus, systemImage: "location.magnifyingglass")
             }
         }
         .fixedSize(horizontal: false, vertical: true)
@@ -556,6 +603,9 @@ struct HistoryView: View {
     @State private var editMode: EditMode = .inactive
     @State private var selection: Set<UUID> = []
     @State private var confirmSelectionDeletion = false
+    @State private var exporting = false
+    @State private var exportFiles: ActivityExportFiles?
+    @State private var exportDirectory: URL?
     #endif
 
     private var rideIDs: Set<UUID> { Set(controller.archive.completed.map(\.id)) }
@@ -595,6 +645,12 @@ struct HistoryView: View {
             .onChange(of: rideIDs) { _, ids in
                 selection.formIntersection(ids)
                 if ids.isEmpty { editMode = .inactive }
+            }
+            .sheet(item: $exportFiles, onDismiss: removeExport) { files in
+                ActivityExportShareSheet(urls: files.urls) { error in
+                    if let error { controller.report("Could not share activities: \(error.localizedDescription)") }
+                    exportFiles = nil
+                }
             }
             #endif
     }
@@ -636,6 +692,18 @@ struct HistoryView: View {
         }
         if !isEditing {
             Section {
+                #if os(iOS)
+                Button {
+                    downloadActivities()
+                } label: {
+                    Label(exporting ? "Preparing activities..." : "Download all activities",
+                          systemImage: "square.and.arrow.down")
+                }
+                .disabled(exporting || controller.archive.completed.isEmpty)
+                .accessibilityIdentifier("downloadAllActivities")
+                Text("Save or share JSON and GPX files containing all saved rides on this iPhone. Includes precise routes and times, but no heart-rate data or active ride.")
+                    .font(.footnote).foregroundStyle(RideTheme.secondaryText)
+                #endif
                 Button("Resend saved rides to companion") { controller.resendHistory() }
                     .disabled(controller.archive.completed.isEmpty)
             }
@@ -695,8 +763,57 @@ struct HistoryView: View {
             if !editing { selection = [] }
         }
     }
+
+    private func downloadActivities() {
+        let rides = controller.archive.completed
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ScooterLog-export-\(UUID().uuidString)", isDirectory: true)
+        exporting = true
+        exportDirectory = directory
+        Task {
+            defer { exporting = false }
+            do {
+                let urls = try await Task.detached(priority: .userInitiated) {
+                    try RideExport.write(rides, to: directory)
+                }.value
+                exportFiles = ActivityExportFiles(urls: urls)
+            } catch {
+                controller.report("Could not export activities: \(error.localizedDescription)")
+                removeExport()
+            }
+        }
+    }
+
+    private func removeExport() {
+        guard let directory = exportDirectory else { return }
+        exportDirectory = nil
+        do { try FileManager.default.removeItem(at: directory) }
+        catch { controller.report("Could not remove temporary export files: \(error.localizedDescription)") }
+    }
     #endif
 }
+
+#if os(iOS)
+private struct ActivityExportFiles: Identifiable {
+    let id = UUID()
+    let urls: [URL]
+}
+
+private struct ActivityExportShareSheet: UIViewControllerRepresentable {
+    let urls: [URL]
+    let completion: @MainActor (Error?) -> Void
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: urls, applicationActivities: nil)
+        controller.completionWithItemsHandler = { _, _, _, error in
+            Task { @MainActor in completion(error) }
+        }
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+#endif
 
 private struct RideRow: View {
     let ride: Ride
@@ -726,6 +843,7 @@ struct RideDetail: View {
     let ride: Ride
     @ObservedObject var controller: RideController
     @State private var confirmDeletion = false
+    @State private var showSpeedMap = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -736,18 +854,36 @@ struct RideDetail: View {
                     ContentUnavailableView("No recorded route", systemImage: "map",
                                            description: Text("This ride has no continuous GPS segment to display."))
                 } else {
+                    Toggle("Speed heat map", isOn: $showSpeedMap)
+                        .accessibilityIdentifier("speedHeatMap")
                     Map {
-                        // Do not connect over unknown GPS gaps.
-                        ForEach(Array(segments.enumerated()), id: \.offset) { _, samples in
-                            MapPolyline(coordinates: samples.map {
-                                CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
-                            }).stroke(.tint, lineWidth: 4)
+                        if showSpeedMap {
+                            ForEach(ride.speedSegments) { segment in
+                                MapPolyline(coordinates: coordinates(segment.samples))
+                                    .stroke(segment.band.color, lineWidth: 5)
+                            }
+                        } else {
+                            ForEach(Array(segments.enumerated()), id: \.offset) { _, samples in
+                                MapPolyline(coordinates: coordinates(samples)).stroke(.tint, lineWidth: 4)
+                            }
                         }
                     }
                     .frame(height: 220)
                     .clipShape(.rect(cornerRadius: 16))
-                    .accessibilityLabel("Recorded route")
-                    .accessibilityHint("Route segments are separated where GPS data is missing.")
+                    .accessibilityLabel(showSpeedMap ? "Recorded route coloured by GPS speed" : "Recorded route")
+                    .accessibilityHint("Route segments are separated where GPS data is missing. Speed colours match the legend below.")
+                    if showSpeedMap {
+                        ForEach(RideSpeedBand.allCases, id: \.self) { band in
+                            Label {
+                                Text(band.label).font(.caption)
+                            } icon: {
+                                Image(systemName: "line.diagonal").foregroundStyle(band.color)
+                            }
+                            .accessibilityElement(children: .combine)
+                        }
+                        Text("Colours show recorded GPS speed, not an inferred speed across gaps.")
+                            .font(.footnote).foregroundStyle(RideTheme.secondaryText)
+                    }
                 }
             }
             .ridePanelRow()
@@ -801,12 +937,32 @@ struct RideDetail: View {
     }
 
     private var segments: [[LocationSample]] {
-        var result: [[LocationSample]] = []
-        for sample in ride.samples {
-            if let last = result.last?.last, sample.timestamp.timeIntervalSince(last.timestamp) <= 15 {
-                result[result.count - 1].append(sample)
-            } else { result.append([sample]) }
+        ride.routeSegments.filter { $0.count > 1 }
+    }
+
+    private func coordinates(_ samples: [LocationSample]) -> [CLLocationCoordinate2D] {
+        samples.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+    }
+}
+
+private extension RideSpeedBand {
+    var color: Color {
+        switch self {
+        case .slow: .blue
+        case .cruising: .green
+        case .brisk: .orange
+        case .fast: .red
+        case .unknown: .gray
         }
-        return result.filter { $0.count > 1 }
+    }
+
+    var label: String {
+        switch self {
+        case .slow: "Blue: under 5 mph"
+        case .cruising: "Green: 5 to under 10 mph"
+        case .brisk: "Orange: 10 to under 15 mph"
+        case .fast: "Red: 15 mph or more"
+        case .unknown: "Gray: speed unavailable"
+        }
     }
 }

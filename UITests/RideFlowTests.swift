@@ -19,10 +19,8 @@ final class RideFlowTests: XCTestCase {
         capture("Active ride dashboard")
         app.terminate()
         app.launch()
-        let resume = app.buttons["Resume recording"]
-        XCTAssertTrue(resume.waitForExistence(timeout: 5))
-        resume.tap()
-        XCTAssertTrue(end.waitForExistence(timeout: 5))
+        XCTAssertTrue(end.waitForExistence(timeout: 5), "A previously requested recording resumes after relaunch")
+        XCTAssertFalse(app.buttons["Resume recording"].exists)
         end.tap()
         try XCTUnwrap(app.buttons.matching(identifier: "End ride").allElementsBoundByIndex.last).tap()
         XCTAssertTrue(start.waitForExistence(timeout: 5))
@@ -286,11 +284,49 @@ final class RideFlowTests: XCTestCase {
         XCTAssertFalse(app.staticTexts["offRouteWarning"].exists, "A successful reroute resumes guidance")
         capture("Turn-by-turn reroute")
 
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        XCTAssertTrue(app.staticTexts["currentManeuver"].waitForExistence(timeout: 5),
+                      "Backgrounding the recording phone does not stop navigation")
+        app.navigationBars["Turn-by-turn"].buttons.firstMatch.tap()
+        app.navigationBars["Directions"].buttons.firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["dashboardManeuver"].waitForExistence(timeout: 5),
+                      "Directions survive leaving the navigation screen and remain on the dashboard")
+        XCTAssertTrue(app.buttons["End ride"].exists, "Going back does not stop recording")
+        app.buttons["Live directions"].tap()
+        XCTAssertTrue(app.buttons["endRideAndDirections"].waitForExistence(timeout: 5))
         app.buttons["endRideAndDirections"].tap()
         try confirm("End this ride and save it?", with: "End ride and save", in: app)
-        app.navigationBars["Directions"].buttons.firstMatch.tap()
+        app.navigationBars["Turn-by-turn"].buttons.firstMatch.tap()
         XCTAssertTrue(app.buttons["Start ride here"].waitForExistence(timeout: 5),
                       "Ending navigation also ends the ride started with it")
+    }
+
+    @MainActor
+    func testActivityDownloadAndSpeedHeatMap() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ScooterLogStubHistory"]
+        app.launch()
+        try endExistingRide(in: app)
+        openHistory(in: app)
+        let download = app.buttons["downloadAllActivities"]
+        reveal(download, in: app)
+        XCTAssertTrue(download.isEnabled)
+        download.tap()
+        XCTAssertTrue(app.buttons["Close"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.buttons["Save to Files"].exists)
+        capture("Download all activities share sheet")
+        app.buttons["Close"].firstMatch.tap()
+
+        let row = app.buttons.matching(identifier: "rideRow").firstMatch
+        reveal(row, in: app, towardTop: true)
+        row.tap()
+        let toggle = app.switches["speedHeatMap"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertTrue(app.staticTexts["Blue: under 5 mph"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Red: 15 mph or more"].exists)
+        capture("Recorded route speed heat map")
     }
 
     @MainActor

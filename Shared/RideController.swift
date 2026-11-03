@@ -1,6 +1,7 @@
 import Combine
 import CoreLocation
 import Foundation
+import OSLog
 import ScooterCore
 import WatchConnectivity
 #if os(iOS)
@@ -24,12 +25,6 @@ enum RideFailure: LocalizedError {
     }
 }
 
-struct PeerSnapshot: Codable, Sendable {
-    var ride: Ride?
-    var sentAt: Date
-    var recording: Bool
-}
-
 @MainActor
 final class RideController: NSObject, ObservableObject, @preconcurrency CLLocationManagerDelegate {
     static let shared = RideController()
@@ -49,6 +44,8 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
     let owner = "Apple Watch"
     #endif
     private let manager = CLLocationManager()
+    private let logger = Logger(subsystem: "com.scooterlog.app", category: "Recording")
+    let directions = DirectionsModel()
     private var serviceSession: CLServiceSession?
     private var backgroundSession: CLBackgroundActivitySession?
     private var updatesTask: Task<Void, Never>?
@@ -64,6 +61,10 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
 
     var displayedRide: Ride? { archive.active ?? peer?.ride }
     var isRemote: Bool { archive.active == nil && peer?.ride != nil }
+    var displayedGuidance: RideGuidance? {
+        if let active = archive.active, directions.guidance?.rideID == active.id { return directions.guidance }
+        return isRemote ? peer?.activeGuidance : nil
+    }
 
     /// Where the rider last recorded a location. Place searches are centred here so nearby results rank first.
     var lastKnownCoordinate: CLLocationCoordinate2D? {
@@ -88,6 +89,37 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         }
         manager.delegate = self
         refreshAuthorization()
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ScooterLogStubHistory"),
+           let id = UUID(uuidString: "7BACBC77-836C-4C1D-83BF-D3471E226EEF") {
+            var ride = Ride(id: id,
+                            owner: "Export preview", startedAt: Date.now.addingTimeInterval(-120))
+            for (index, speed) in [2.0, 3.0, 4.0, 5.0, 7.0].enumerated() {
+                let time = ride.startedAt.addingTimeInterval(Double(index * 5))
+                _ = ride.append(LocationSample(latitude: 40.7527 + Double(index) * 0.0001,
+                                               longitude: -73.9772, timestamp: time, accuracy: 5, speed: speed),
+                                receivedAt: time)
+            }
+            ride.end(at: ride.startedAt.addingTimeInterval(25))
+            perform {
+                var next = archive
+                next.importCompleted(ride)
+                try persist(next)
+            }
+        }
+        #endif
+        directions.onGuidanceChange = { [weak self] in self?.broadcast() }
+        if archive.shouldResumeRecording(on: owner), authorized {
+            archive.active?.interrupt(at: .now)
+            do {
+                try persist(archive)
+                beginUpdates()
+                logger.notice("Resumed the previously requested recording session after launch.")
+                #if os(iOS)
+                if let ride = archive.active { liveActivity.start(ride, onError: report) }
+                #endif
+            } catch { report("Could not resume recording: \(error.localizedDescription). Resume or end the saved ride.") }
+        }
         if WCSession.isSupported() {
             let session = WCSession.default
             connectivity = session
@@ -144,8 +176,10 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         var next = archive
         next.active?.interrupt(at: .now)
         _ = next.start(owner: owner, at: .now)
+        next.recordingRequested = true
         try persist(next)
         beginUpdates()
+        logger.notice("Started location recording on the owning device.")
         broadcast()
         #if os(iOS)
         if let ride = archive.active { liveActivity.start(ride, onError: report) }
@@ -161,6 +195,8 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         try repository.saveCompleted(completed)
         stopUpdates(preserveCheckpoint: false)
         archive = next
+        directions.stopGuidance()
+        logger.notice("Ended and saved the local ride after an explicit end request.")
         do { try repository.checkpoint(nil) }
         catch { report("Ride saved and recording ended. Old checkpoint cleanup failed; recovery will prefer the saved ride: \(error.localizedDescription)") }
         broadcast()
@@ -184,6 +220,20 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
     func refreshConnection() {
         broadcast()
         flushOutbox()
+        guard let session = companionSession, session.isReachable else { return }
+        session.sendMessage(["requestSnapshot": true], replyHandler: { reply in
+            let snapshot = reply["snapshot"] as? Data
+            let places = reply["places"] as? Data
+            let error = reply["error"] as? String
+            Task { @MainActor in
+                if let snapshot { self.receiveSnapshot(snapshot) }
+                if let places { self.receivePlaces(places) }
+                if let error { self.report("Could not refresh companion: \(error)") }
+            }
+        }, errorHandler: { error in
+            let message = error.localizedDescription
+            Task { @MainActor in self.report("Could not refresh companion: \(message)") }
+        })
     }
 
     func refreshLiveActivityAppearance() {
@@ -251,7 +301,10 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         do { try action() } catch { report(error.localizedDescription) }
     }
 
-    func report(_ message: String) { errorMessage = message }
+    func report(_ message: String) {
+        logger.error("\(message)")
+        errorMessage = message
+    }
 
     private func persist(_ next: RideArchive) throws {
         let repository = RideRepository(directory: storeURL.deletingLastPathComponent())
@@ -259,7 +312,7 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         for ride in next.completed where existing[ride.id] != ride {
             try repository.saveCompleted(ride)
         }
-        try repository.checkpoint(next.active)
+        try repository.checkpoint(next.active, recordingRequested: next.recordingRequested)
         archive = next
     }
 
@@ -272,11 +325,16 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
             do {
                 for try await update in CLLocationUpdate.liveUpdates(.otherNavigation) {
                     guard let self, !Task.isCancelled else { break }
-                    if update.authorizationDenied {
+                    if update.authorizationDenied || update.authorizationDeniedGlobally || update.authorizationRestricted {
                         self.stopUpdates()
                         self.report("Location authorization was denied; recording is paused.")
                         self.broadcast()
                         break
+                    }
+                    if update.insufficientlyInUse || update.serviceSessionRequired {
+                        self.locationStatus = "Background GPS is unavailable. Reopen ScooterLog on the recording device."
+                        self.report(self.locationStatus)
+                        continue
                     }
                     if update.locationUnavailable {
                         self.updateStationarity(confirmed: false)
@@ -296,6 +354,10 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
                         self.locationStatus = "Location unavailable. Unconfirmed time remains unknown."
                     }
                 }
+                guard let self, !Task.isCancelled, self.recording else { return }
+                self.stopUpdates()
+                self.report("The GPS update stream ended unexpectedly. Resume or end this ride; its saved route is preserved.")
+                self.broadcast()
             } catch {
                 guard let self, !Task.isCancelled else { return }
                 self.stopUpdates()
@@ -316,11 +378,12 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         serviceSession?.invalidate()
         serviceSession = nil
         recording = false
+        archive.recordingRequested = false
         if preserveCheckpoint, var ride = archive.active {
             ride.finishStationary(at: .now)
             ride.interrupt(at: .now)
             archive.active = ride
-            do { try RideRepository(directory: storeURL.deletingLastPathComponent()).checkpoint(ride) }
+            do { try RideRepository(directory: storeURL.deletingLastPathComponent()).checkpoint(ride, recordingRequested: false) }
             catch { report("Recording stopped, but the latest timing checkpoint could not be saved: \(error.localizedDescription)") }
         }
     }
@@ -335,7 +398,7 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
             ride.interrupt(at: .now)
         }
         do {
-            try RideRepository(directory: storeURL.deletingLastPathComponent()).checkpoint(ride)
+            try RideRepository(directory: storeURL.deletingLastPathComponent()).checkpoint(ride, recordingRequested: recording)
             archive.active = ride
             broadcast()
             #if os(iOS)
@@ -351,11 +414,15 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         guard recording, var ride = archive.active else { return }
         let sample = LocationSample(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude,
                                     timestamp: location.timestamp, accuracy: location.horizontalAccuracy, speed: location.speed)
-        guard ride.append(sample, receivedAt: .now) else { return }
+        guard ride.append(sample, receivedAt: .now) else {
+            locationStatus = "GPS fix rejected: waiting for a recent, accurate location. Unconfirmed time stays unknown."
+            return
+        }
+        locationStatus = "GPS recording on \(owner)"
         var next = archive
         next.active = ride
         do {
-            try RideRepository(directory: storeURL.deletingLastPathComponent()).checkpoint(ride)
+            try RideRepository(directory: storeURL.deletingLastPathComponent()).checkpoint(ride, recordingRequested: recording)
             archive = next
         } catch {
             stopUpdates()
@@ -363,6 +430,7 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
             broadcast()
             return
         }
+        directions.updateGuidance(from: sample)
         if Date.now.timeIntervalSince(lastBroadcast) >= 5 {
             broadcast()
             #if os(iOS)
@@ -423,9 +491,7 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         lastBroadcast = .now
         guard let session = companionSession else { return }
         do {
-            let snapshot = PeerSnapshot(ride: archive.active?.preview(), sentAt: .now, recording: recording)
-            let data = try JSONEncoder().encode(snapshot)
-            let context: [String: Any] = ["snapshot": data, "places": try JSONEncoder().encode(places)]
+            let context = try companionContext()
             try session.updateApplicationContext(context)
             if session.isReachable {
                 session.sendMessage(context, replyHandler: nil, errorHandler: { error in
@@ -436,6 +502,12 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
                 })
             }
         } catch { report("Could not sync live ride: \(error.localizedDescription)") }
+    }
+
+    private func companionContext() throws -> [String: Any] {
+        let snapshot = PeerSnapshot(ride: archive.active?.preview(), sentAt: .now, recording: recording,
+                                    guidance: directions.guidance)
+        return ["snapshot": try JSONEncoder().encode(snapshot), "places": try JSONEncoder().encode(places)]
     }
 
     private var outbox: URL { storeURL.deletingLastPathComponent().appendingPathComponent("Outbox") }
@@ -552,10 +624,16 @@ extension RideController: WCSessionDelegate {
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any],
                              replyHandler: @escaping ([String: Any]) -> Void) {
         let rideID = message["endRide"] as? String
+        let requestsSnapshot = message["requestSnapshot"] as? Bool == true
         // WCSession owns the reply callback; it is called exactly once on the main actor.
         let reply = ReplyHandler(replyHandler)
         Task { @MainActor in
-            guard let rideID, self.archive.active?.id.uuidString == rideID else {
+            if requestsSnapshot, rideID == nil {
+                do { reply.call(try self.companionContext()) }
+                catch { reply.call(["error": error.localizedDescription]) }
+                return
+            }
+            guard !requestsSnapshot, let rideID, self.archive.active?.id.uuidString == rideID else {
                 reply.call(["error": "That ride is no longer active on this device."])
                 self.broadcast()
                 return

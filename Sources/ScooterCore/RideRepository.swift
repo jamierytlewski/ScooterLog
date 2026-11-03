@@ -29,14 +29,16 @@ public struct RideRepository: Sendable {
            archive.completed.contains(where: { $0.id == active.id }) || archive.isDeleted(active.id) {
             archive.active = nil
         }
+        if archive.active == nil { archive.recordingRequested = nil }
         if archive.active?.stationarySince != nil {
             archive.active?.interrupt(at: .now)
         }
         return archive
     }
 
-    public func checkpoint(_ active: Ride?) throws {
-        try RideDisk.save(RideArchive(active: active), to: activeURL)
+    public func checkpoint(_ active: Ride?, recordingRequested: Bool? = nil) throws {
+        try RideDisk.save(RideArchive(active: active, recordingRequested: active == nil ? nil : recordingRequested),
+                          to: activeURL)
     }
 
     public func saveCompleted(_ ride: Ride) throws {

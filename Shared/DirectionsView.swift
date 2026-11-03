@@ -212,9 +212,19 @@ final class DirectionsModel: ObservableObject {
     private var automaticRerouteAttempted = false
     private var rerouteTask: Task<Void, Never>?
     private var locationTimeout: Task<Void, Never>?
+    private var guidanceRideID: UUID?
+    var onGuidanceChange: (() -> Void)?
 
     var selectedRoute: RouteOption? { routes.first { $0.id == selectedRouteID } }
     var steps: [RouteInstruction] { selectedRoute?.steps ?? [] }
+    var guidance: RideGuidance? {
+        guard isGuiding, let guidanceRideID, let instruction = steps[safe: stepIndex] else { return nil }
+        return RideGuidance(rideID: guidanceRideID, destination: destination?.name ?? "Destination",
+                            instruction: instruction.text, nextInstruction: steps[safe: stepIndex + 1]?.text,
+                            distanceToManeuver: distanceToManeuver, step: stepIndex + 1, stepCount: steps.count,
+                            locationTimestamp: currentLocation?.timestamp, error: guidanceError,
+                            isRerouting: isRerouting, hasArrived: hasArrived)
+    }
 
     func select(_ route: RouteOption) {
         stopGuidance()
@@ -315,6 +325,7 @@ final class DirectionsModel: ObservableObject {
             do {
                 startedRideForGuidance = !controller.recording
                 if startedRideForGuidance { try controller.start() }
+                guidanceRideID = controller.archive.active?.id
                 guidanceError = nil
                 voiceGuidanceEnabled = voiceEnabled
                 isGuiding = true
@@ -322,12 +333,14 @@ final class DirectionsModel: ObservableObject {
                 hasArrived = false
                 offRouteSamples = 0
                 automaticRerouteAttempted = false
+                defer { onGuidanceChange?() }
                 locationTimeout?.cancel()
                 locationTimeout = Task { [weak self] in
                     do { try await Task.sleep(for: .seconds(25)) }
                     catch { return }
                     guard let self, self.currentLocation == nil, self.isGuiding else { return }
                     self.guidanceError = "The ride has started, but GPS hasn't found an accurate location yet. Wait outdoors for a fix or stop navigation."
+                    self.onGuidanceChange?()
                 }
                 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("-ScooterLogStubNavigation"),
@@ -364,6 +377,7 @@ final class DirectionsModel: ObservableObject {
         }
 
         func stopGuidance() {
+            let wasGuiding = isGuiding
             locationTimeout?.cancel()
             locationTimeout = nil
             rerouteTask?.cancel()
@@ -381,6 +395,8 @@ final class DirectionsModel: ObservableObject {
             automaticRerouteAttempted = false
             lastAnnouncedStepIndex = -1
             voiceGuidanceEnabled = false
+            guidanceRideID = nil
+            if wasGuiding { onGuidanceChange?() }
         }
 
         func setVoiceGuidance(_ enabled: Bool) {
@@ -427,6 +443,14 @@ final class DirectionsModel: ObservableObject {
 
         private func updateGuidance(_ location: CLLocation) {
             guard isGuiding, !hasArrived, let route = selectedRoute else { return }
+            let previousStep = stepIndex
+            let previousError = guidanceError
+            let previousArrival = hasArrived
+            defer {
+                if previousStep != stepIndex || previousError != guidanceError || previousArrival != hasArrived {
+                    onGuidanceChange?()
+                }
+            }
             currentLocation = location
             locationTimeout?.cancel()
             locationTimeout = nil
@@ -476,7 +500,11 @@ final class DirectionsModel: ObservableObject {
         private func reroute(from location: CLLocation) async {
             guard let destination, let mode, !isRerouting else { return }
             isRerouting = true
-            defer { isRerouting = false }
+            onGuidanceChange?()
+            defer {
+                isRerouting = false
+                onGuidanceChange?()
+            }
             do {
                 let alternatives: [RouteOption]
                 #if DEBUG
@@ -555,12 +583,18 @@ final class DirectionsModel: ObservableObject {
 
 struct DirectionsView: View {
     @ObservedObject var controller: RideController
-    @StateObject private var model = DirectionsModel()
+    @ObservedObject private var model: DirectionsModel
+    @State private var showingGuidance = false
     @State private var origin: PlaceChoice?
     @State private var mode = RouteMode.cycling
     @AppStorage("f3PlanningSpeedMPH") private var planningSpeed = 20.0
     @AppStorage("directionsVoiceGuidance") private var voiceGuidance = true
     @State private var camera = MapCameraPosition.automatic
+
+    init(controller: RideController) {
+        self.controller = controller
+        model = controller.directions
+    }
 
     var body: some View {
         Form {
@@ -715,10 +749,9 @@ struct DirectionsView: View {
         .onChange(of: mode) { refresh() }
         .onChange(of: model.selectedRouteID) { camera = .automatic }
         .onDisappear { if !model.isGuiding { model.cancel() } }
-        .navigationDestination(isPresented: Binding(
-            get: { model.isGuiding },
-            set: { if !$0 { model.stopGuidance() } }
-        )) {
+        .onAppear { showingGuidance = model.isGuiding }
+        .onChange(of: model.isGuiding) { _, guiding in showingGuidance = guiding }
+        .navigationDestination(isPresented: $showingGuidance) {
             TurnByTurnView(model: model, controller: controller, voiceGuidance: $voiceGuidance)
         }
         #if os(iOS)
@@ -806,7 +839,7 @@ struct DirectionsView: View {
     }
 }
 
-private struct TurnByTurnView: View {
+struct TurnByTurnView: View {
     @ObservedObject var model: DirectionsModel
     @ObservedObject var controller: RideController
     @Binding var voiceGuidance: Bool
@@ -906,7 +939,7 @@ private struct TurnByTurnView: View {
                             .frame(maxWidth: .infinity, minHeight: 44)
                             .accessibilityIdentifier("endNavigation")
                         }
-                        Text("Keep ScooterLog open for live directions. Follow a safe, legal detour if the route is blocked; rerouting starts from your current location.")
+                        Text("Directions follow the recording device's GPS, including in the background. The paired watch shows the current instruction while connected. Follow a safe, legal detour if the route is blocked.")
                             .font(.footnote).foregroundStyle(RideTheme.secondaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -928,10 +961,6 @@ private struct TurnByTurnView: View {
             updateCamera()
             model.updateGuidance(from: controller.displayedRide?.samples.last)
         }
-        .onChange(of: controller.displayedRide?.samples.count ?? 0) {
-            model.updateGuidance(from: controller.displayedRide?.samples.last)
-        }
-        .onDisappear { if model.isGuiding { model.stopGuidance() } }
         .confirmationDialog("End this ride and save it?", isPresented: $confirmEndRide,
                             titleVisibility: .visible) {
             Button("End ride and save", role: .destructive) {
@@ -952,6 +981,68 @@ private struct TurnByTurnView: View {
         guard let location = model.currentLocation else { return }
         camera = .camera(MapCamera(centerCoordinate: location.coordinate, distance: 900,
                                    heading: location.course >= 0 ? location.course : 0, pitch: 35))
+    }
+}
+
+struct RideGuidanceSummary: View {
+    let guidance: RideGuidance
+    let now: Date
+    let recording: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(guidance.destination, systemImage: "location.north.line")
+                .font(.caption).foregroundStyle(RideTheme.secondaryText)
+            if guidance.hasArrived {
+                Label("You've arrived", systemImage: "checkmark.circle.fill").font(.headline)
+            } else if let error = guidance.error {
+                Label(error, systemImage: "exclamationmark.triangle").font(.headline)
+            } else {
+                Text(guidance.instruction)
+                    .font(.title3.bold())
+                    .accessibilityIdentifier("dashboardManeuver")
+                if !recording {
+                    Text("Recording paused. Resume GPS on the recording device.").font(.footnote)
+                } else if !guidance.hasFreshLocation(at: now) {
+                    Text("Waiting for fresh GPS. This is the last known direction.").font(.footnote)
+                } else if let distance = guidance.distanceToManeuver {
+                    Text("\(RideUnits.distance(distance)) to \(guidance.nextInstruction == nil ? "destination" : "next turn")")
+                        .font(.headline.monospacedDigit())
+                        .foregroundStyle(RideTheme.selected.color)
+                }
+                if let next = guidance.nextInstruction, recording, guidance.hasFreshLocation(at: now) {
+                    Text("Then: \(next)").font(.body).foregroundStyle(RideTheme.secondaryText)
+                }
+            }
+            if guidance.isRerouting { ProgressView("Updating route...") }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .contain)
+    }
+}
+
+struct CompanionDirectionsView: View {
+    @ObservedObject var controller: RideController
+
+    var body: some View {
+        List {
+            if let guidance = controller.peer?.activeGuidance {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    RideGuidanceSummary(guidance: guidance, now: context.date,
+                                        recording: controller.peer?.recording == true)
+                }
+                Text("Step \(guidance.step) of \(guidance.stepCount)").font(.caption)
+                Text(controller.reachable
+                     ? "Directions from \(controller.peer?.ride?.owner ?? "the companion")."
+                     : "Companion offline. Directions may be out of date.")
+                    .font(.footnote).foregroundStyle(RideTheme.secondaryText)
+                Text("Change or stop navigation on the recording device.").font(.footnote)
+            } else {
+                Text("No live directions from the recording device. Choose a destination and start turn-by-turn there.")
+            }
+        }
+        .rideSurface()
+        .navigationTitle("Turn-by-turn")
     }
 }
 

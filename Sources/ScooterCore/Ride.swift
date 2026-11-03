@@ -179,15 +179,21 @@ public struct Ride: Codable, Equatable, Identifiable, Sendable {
 public struct RideArchive: Codable, Equatable, Sendable {
     public var active: Ride?
     public var completed: [Ride]
+    public var recordingRequested: Bool?
     /// Ids of rides the user deleted. Remembered so an older copy arriving from the companion
     /// or iCloud cannot bring a deleted ride back. Persisted separately by `RideRepository`.
     public internal(set) var deleted: Set<UUID> = []
 
-    private enum CodingKeys: String, CodingKey { case active, completed }
+    private enum CodingKeys: String, CodingKey { case active, completed, recordingRequested }
 
-    public init(active: Ride? = nil, completed: [Ride] = []) {
+    public init(active: Ride? = nil, completed: [Ride] = [], recordingRequested: Bool? = nil) {
         self.active = active
         self.completed = completed
+        self.recordingRequested = recordingRequested
+    }
+
+    public func shouldResumeRecording(on owner: String) -> Bool {
+        recordingRequested == true && active?.owner == owner && active?.endedAt == nil
     }
 
     @discardableResult
@@ -203,6 +209,7 @@ public struct RideArchive: Codable, Equatable, Sendable {
         ride.end(at: date)
         importCompleted(ride)
         active = nil
+        recordingRequested = nil
         return ride
     }
 
