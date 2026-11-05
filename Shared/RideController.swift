@@ -91,7 +91,9 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         refreshAuthorization()
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ScooterLogStubHistory"),
-           let id = UUID(uuidString: "7BACBC77-836C-4C1D-83BF-D3471E226EEF") {
+           let fixedID = UUID(uuidString: "7BACBC77-836C-4C1D-83BF-D3471E226EEF") {
+            // A delete test may have tombstoned the fixed stub, which would block re-importing it.
+            let id = archive.isDeleted(fixedID) ? UUID() : fixedID
             var ride = Ride(id: id,
                             owner: "Export preview", startedAt: Date.now.addingTimeInterval(-120))
             for (index, speed) in [2.0, 3.0, 4.0, 5.0, 7.0].enumerated() {

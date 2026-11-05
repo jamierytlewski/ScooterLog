@@ -5,7 +5,15 @@ import WidgetKit
 
 @main
 struct ScooterWidgets: WidgetBundle {
-    var body: some Widget { ScooterRideWidget() }
+    var body: some Widget {
+        ScooterRideWidget()
+        WeeklyMilesWidget()
+        WeeklyGoalWidget()
+        RideStreakWidget()
+        LastRideWidget()
+        RideWeatherWidget()
+        StartRideControl()
+    }
 }
 
 struct ScooterRideWidget: Widget {

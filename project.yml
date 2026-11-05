@@ -48,6 +48,8 @@ targets:
       - Shared
     dependencies:
       - package: ScooterCore
+      - target: ScooterWatchWidgets
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jamierytlewski.scooterlog.watchkitapp
@@ -61,15 +63,42 @@ targets:
     platform: iOS
     sources:
       - LiveActivity
+      - Widgets
       - Shared/RideTheme.swift
+      - Shared/RideWeatherService.swift
+      - Shared/RideWidgetStore.swift
+      - Shared/StartRideControlIntent.swift
       - Shared/Assets.xcassets
+      - Shared/PrivacyInfo.xcprivacy
     dependencies:
       - package: ScooterCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jamierytlewski.scooterlog.activity
+        CODE_SIGN_ENTITLEMENTS: Configuration/Activity.entitlements
         TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_FILE: Configuration/Activity-Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
+  ScooterWatchWidgets:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - WatchWidgets
+      - Widgets
+      - Shared/RideTheme.swift
+      - Shared/RideWeatherService.swift
+      - Shared/RideWidgetStore.swift
+      - Shared/StartRideControlIntent.swift
+      - Shared/Assets.xcassets
+      - Shared/PrivacyInfo.xcprivacy
+    dependencies:
+      - package: ScooterCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jamierytlewski.scooterlog.watchkitapp.widgets
+        INFOPLIST_FILE: Configuration/WatchWidgets-Info.plist
+        CODE_SIGN_ENTITLEMENTS: Configuration/WatchWidgets.entitlements
         GENERATE_INFOPLIST_FILE: NO
         SKIP_INSTALL: YES
   ScooterLogUITests:

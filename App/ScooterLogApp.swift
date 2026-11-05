@@ -9,6 +9,10 @@ struct ScooterLogApp: App {
     @AppStorage(RideTheme.preferenceKey) private var theme: RideTheme = .tronBlue
     @Environment(\.scenePhase) private var scenePhase
 
+    init() {
+        StartRideControlIntent.handler = { HomeScreenActions.shared.startRequested = true }
+    }
+
     var body: some Scene {
         WindowGroup {
             RideDashboard(controller: controller)

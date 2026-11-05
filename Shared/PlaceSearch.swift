@@ -318,6 +318,7 @@ final class PlaceSearchModel: ObservableObject {
 struct PlacePicker: View {
     @StateObject private var model: PlaceSearchModel
     @Environment(\.dismiss) private var dismiss
+    @State private var searchPresented = false
     private let dismissesOnPick: Bool
     private let onPick: (PlaceChoice) -> Void
 
@@ -351,7 +352,14 @@ struct PlacePicker: View {
         .navigationBarTitleDisplayMode(.inline)
         .scrollDismissesKeyboard(.interactively)
         #endif
+        #if os(iOS)
+        // Inside a tab, an active search can outlive this pushed page; keep it in the page's navigation bar and end it on pick.
+        .searchable(text: $model.query, isPresented: $searchPresented,
+                    placement: .navigationBarDrawer(displayMode: .always), prompt: "Address or place")
+        .onDisappear { searchPresented = false }
+        #else
         .searchable(text: $model.query, prompt: "Address or place")
+        #endif
         .autocorrectionDisabled()
         .onSubmit(of: .search) { Task { await model.submit() } }
     }
@@ -420,6 +428,7 @@ struct PlacePicker: View {
     }
 
     private func finish(_ place: PlaceChoice) {
+        searchPresented = false
         onPick(place)
         if dismissesOnPick { dismiss() }
     }

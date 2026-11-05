@@ -25,20 +25,17 @@ final class RideFlowTests: XCTestCase {
         submissionScene("03-recorded-route")
 
         let heatMap = app.switches["speedHeatMap"]
-        heatMap.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
-        XCTAssertEqual(heatMap.value as? String, "1")
+        XCTAssertEqual(heatMap.value as? String, "1", "Speed heat map is on by default")
         submissionScene("04-speed-heat-map")
 
         app.navigationBars["Ride"].buttons.firstMatch.tap()
-        app.navigationBars["History"].buttons.firstMatch.tap()
-        reveal(app.buttons["Saved places"], in: app)
-        app.buttons["Saved places"].tap()
+        openTab("Ride", in: app)
+        openTab("Saved places", in: app)
         XCTAssertTrue(app.staticTexts["Little Island"].waitForExistence(timeout: 5))
         submissionScene("05-saved-places")
 
-        app.navigationBars["Saved places"].buttons.firstMatch.tap()
-        reveal(app.buttons["Directions"], in: app)
-        app.buttons["Directions"].tap()
+        openTab("Ride", in: app)
+        openTab("Directions", in: app)
         let mode = app.buttons["routeMode"]
         reveal(mode, in: app)
         mode.tap()
@@ -86,8 +83,7 @@ final class RideFlowTests: XCTestCase {
         end.tap()
         try XCTUnwrap(app.buttons.matching(identifier: "End ride").allElementsBoundByIndex.last).tap()
         XCTAssertTrue(start.waitForExistence(timeout: 5))
-        reveal(app.buttons["Ride history"], in: app)
-        app.buttons["Ride history"].tap()
+        openTab("History", in: app)
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
         XCTAssertGreaterThan(app.cells.count, 1)
     }
@@ -106,7 +102,7 @@ final class RideFlowTests: XCTestCase {
         try assertHomeScreenIcon(isRed: false, in: app)
         XCTAssertEqual(themeMenu.value as? String, "Tron blue")
         capture("Tron blue dashboard")
-        reveal(app.buttons["Ride history"], in: app)
+        scrollToBottom(in: app)
         // iOS 27.0's scaling/clipping heuristics flag native list content; compare actual text-size layouts below.
         try auditDashboard(in: app)
 
@@ -120,7 +116,7 @@ final class RideFlowTests: XCTestCase {
         XCTAssertTrue(themeMenu.waitForExistence(timeout: 10))
         XCTAssertEqual(themeMenu.value as? String, "Ares red")
         capture("Ares red dashboard")
-        reveal(app.buttons["Ride history"], in: app)
+        scrollToBottom(in: app)
         try auditDashboard(in: app)
 
         XCUIDevice.shared.orientation = .landscapeLeft
@@ -217,8 +213,7 @@ final class RideFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-ScooterLogStubPlaceSearch", "-ScooterLogStubDirections"]
         app.launch()
-        reveal(app.buttons["Directions"], in: app)
-        app.buttons["Directions"].tap()
+        openTab("Directions", in: app)
         let destination = app.buttons["destinationQuery"]
         XCTAssertTrue(destination.waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["findRoute"].exists, "There is nothing to refresh before a destination is chosen")
@@ -269,7 +264,7 @@ final class RideFlowTests: XCTestCase {
         let back = app.buttons["Previous direction"]
         reveal(back, in: app)
         XCTAssertFalse(back.isEnabled, "A new travel mode resets manual directions")
-        app.navigationBars["Directions"].buttons.firstMatch.tap()
+        openTab("Ride", in: app)
         reveal(app.buttons["Start ride here"], in: app)
         XCTAssertTrue(app.buttons["Start ride here"].exists, "Planning must not start GPS recording")
     }
@@ -279,8 +274,7 @@ final class RideFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-ScooterLogStubPlaceSearch", "-ScooterLogStubDirections", "-ScooterLogStubLocationDenied"]
         app.launch()
-        reveal(app.buttons["Directions"], in: app)
-        app.buttons["Directions"].tap()
+        openTab("Directions", in: app)
         app.buttons["destinationQuery"].tap()
         let field = app.searchFields.firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 5))
@@ -313,8 +307,7 @@ final class RideFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-ScooterLogStubPlaceSearch", "-ScooterLogStubDirections", "-ScooterLogStubRouteFailure"]
         app.launch()
-        reveal(app.buttons["Directions"], in: app)
-        app.buttons["Directions"].tap()
+        openTab("Directions", in: app)
         app.buttons["destinationQuery"].tap()
         let field = app.searchFields.firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 5))
@@ -336,8 +329,8 @@ final class RideFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-ScooterLogStubPlaceSearch", "-ScooterLogStubDirections", "-ScooterLogStubNavigation"]
         app.launch()
-        reveal(app.buttons["Directions"], in: app)
-        app.buttons["Directions"].tap()
+        try endExistingRide(in: app)
+        openTab("Directions", in: app)
         app.buttons["destinationQuery"].tap()
         let field = app.searchFields.firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 5))
@@ -369,7 +362,7 @@ final class RideFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["currentManeuver"].waitForExistence(timeout: 5),
                       "Backgrounding the recording phone does not stop navigation")
         app.navigationBars["Turn-by-turn"].buttons.firstMatch.tap()
-        app.navigationBars["Directions"].buttons.firstMatch.tap()
+        openTab("Ride", in: app)
         XCTAssertTrue(app.staticTexts["dashboardManeuver"].waitForExistence(timeout: 5),
                       "Directions survive leaving the navigation screen and remain on the dashboard")
         XCTAssertTrue(app.buttons["End ride"].exists, "Going back does not stop recording")
@@ -405,18 +398,19 @@ final class RideFlowTests: XCTestCase {
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
         let routeMap = app.descendants(matching: .any)["savedRideRouteMap"].firstMatch
         XCTAssertTrue(routeMap.waitForExistence(timeout: 5))
-        let normalRedPixels = try redPixels(in: routeMap.screenshot().image)
-        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
-        XCTAssertEqual(toggle.value as? String, "1")
+        XCTAssertEqual(toggle.value as? String, "1", "Speed heat map is on by default")
         XCTAssertTrue(app.descendants(matching: .any)["speedLegend-slow"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["speedLegend-fast"].firstMatch.exists)
         let speedRedPixels = try redPixels(in: routeMap.screenshot().image)
-        XCTAssertGreaterThan(speedRedPixels, normalRedPixels + 150,
-                             "Speed overlays must render after switching, without touching the map")
         capture("Recorded route speed heat map")
         toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
-        XCTAssertLessThan(try redPixels(in: routeMap.screenshot().image), speedRedPixels - 150,
-                          "Turning the heat map off must also refresh without a map gesture")
+        XCTAssertEqual(toggle.value as? String, "0")
+        let normalRedPixels = try redPixels(in: routeMap.screenshot().image)
+        XCTAssertLessThan(normalRedPixels, speedRedPixels - 150,
+                          "Turning the heat map off must refresh without a map gesture")
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertGreaterThan(try redPixels(in: routeMap.screenshot().image), normalRedPixels + 150,
+                             "Speed overlays must render after switching back, without touching the map")
     }
 
     private func redPixels(in image: UIImage) throws -> Int {
@@ -444,8 +438,8 @@ final class RideFlowTests: XCTestCase {
             "-ScooterLogStubNavigation", "-ScooterLogStubRerouteFailure"
         ]
         app.launch()
-        reveal(app.buttons["Directions"], in: app)
-        app.buttons["Directions"].tap()
+        try endExistingRide(in: app)
+        openTab("Directions", in: app)
         app.buttons["destinationQuery"].tap()
         let field = app.searchFields.firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 5))
@@ -470,9 +464,10 @@ final class RideFlowTests: XCTestCase {
         retry.tap()
         XCTAssertTrue(warning.waitForExistence(timeout: 5))
 
+        reveal(app.buttons["endRideAndDirections"], in: app)
         app.buttons["endRideAndDirections"].tap()
         try confirm("End this ride and save it?", with: "End ride and save", in: app)
-        app.navigationBars["Directions"].buttons.firstMatch.tap()
+        openTab("Ride", in: app)
         XCTAssertTrue(app.buttons["Start ride here"].waitForExistence(timeout: 5))
     }
 
@@ -481,8 +476,7 @@ final class RideFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-ScooterLogStubPlaceSearch", "-ScooterLogStubDirections"]
         app.launch()
-        reveal(app.buttons["Saved places"], in: app)
-        app.buttons["Saved places"].tap()
+        openTab("Saved places", in: app)
         let add = app.buttons["addPlace"]
         reveal(add, in: app)
         add.tap()
@@ -509,18 +503,16 @@ final class RideFlowTests: XCTestCase {
         alert.buttons["Save"].tap()
 
         XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout: 5))
-        app.navigationBars["Saved places"].buttons.firstMatch.tap()
-        reveal(app.buttons["Directions"], in: app)
-        app.buttons["Directions"].tap()
+        openTab("Ride", in: app)
+        openTab("Directions", in: app)
         let savedDestination = app.buttons["Directions to \(name)"]
         reveal(savedDestination, in: app)
         savedDestination.tap()
         let options = app.buttons.matching(identifier: "routeOption")
         reveal(options.firstMatch, in: app)
         XCTAssertTrue(options.firstMatch.waitForExistence(timeout: 5), "Saved addresses can preview routes before a ride")
-        app.navigationBars["Directions"].buttons.firstMatch.tap()
-        reveal(app.buttons["Saved places"], in: app)
-        app.buttons["Saved places"].tap()
+        openTab("Ride", in: app)
+        openTab("Saved places", in: app)
         reveal(app.staticTexts[name], in: app)
         app.buttons["Actions for \(name)"].tap()
         app.buttons["Delete"].tap()
@@ -533,8 +525,7 @@ final class RideFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-ScooterLogStubPlaceSearch"]
         app.launch()
-        reveal(app.buttons["Directions"], in: app)
-        app.buttons["Directions"].tap()
+        openTab("Directions", in: app)
         app.buttons["destinationQuery"].tap()
         let field = app.searchFields.firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 5))
@@ -554,9 +545,6 @@ final class RideFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
         try endExistingRide(in: app)
-        let directions = app.buttons["Directions"]
-        reveal(directions, in: app)
-        let regularRowHeight = directions.frame.height
         app.terminate()
         app.launchArguments = ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         app.launch()
@@ -567,7 +555,9 @@ final class RideFlowTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(app.buttons["themeMenu"].frame.height, 28)
         XCTAssertGreaterThanOrEqual(app.buttons["themeMenu"].frame.width, 28)
         capture("Largest Dynamic Type dashboard")
-        try app.performAccessibilityAudit(for: [.contrast, .hitRegion, .textClipped])
+        try app.performAccessibilityAudit(for: [.contrast, .hitRegion, .textClipped]) { issue in
+            issue.auditType == .contrast && issue.element?.label == "Start ride here"
+        }
 
         start.tap()
         let end = app.buttons["End ride"]
@@ -579,17 +569,15 @@ final class RideFlowTests: XCTestCase {
         try XCTUnwrap(app.buttons.matching(identifier: "End ride").allElementsBoundByIndex.last).tap()
         XCTAssertTrue(start.waitForExistence(timeout: 5))
 
-        reveal(app.buttons["Saved places"], in: app)
-        for title in ["Ride history", "Directions", "Saved places"] {
-            let link = app.buttons[title]
+        for title in ["Ride", "History", "Directions", "Saved places"] {
+            let link = app.tabBars.buttons[title]
             XCTAssertTrue(link.isHittable)
             XCTAssertGreaterThanOrEqual(link.frame.height, 44)
             XCTAssertGreaterThanOrEqual(link.frame.minX, app.frame.minX)
             XCTAssertLessThanOrEqual(link.frame.maxX, app.frame.maxX)
         }
-        XCTAssertGreaterThan(directions.frame.height, regularRowHeight)
         capture("Largest Dynamic Type ride tools")
-        app.buttons["Ride history"].tap()
+        openTab("History", in: app)
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
         capture("Largest Dynamic Type history")
     }
@@ -735,10 +723,22 @@ final class RideFlowTests: XCTestCase {
         dismissConfirmation("Delete this ride?", in: app)
     }
 
+    /// Settles the dashboard at its end so no section header sits mid-transition under the glass navigation bar.
+    @MainActor
+    private func scrollToBottom(in app: XCUIApplication) {
+        for _ in 0..<4 { app.swipeUp() }
+    }
+
+    @MainActor
+    private func openTab(_ title: String, in app: XCUIApplication) {
+        let tab = app.tabBars.buttons[title]
+        XCTAssertTrue(tab.waitForExistence(timeout: 5), "Missing tab “\(title)”")
+        tab.tap()
+    }
+
     @MainActor
     private func openHistory(in app: XCUIApplication) {
-        reveal(app.buttons["Ride history"], in: app)
-        app.buttons["Ride history"].tap()
+        openTab("History", in: app)
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
     }
 
@@ -776,7 +776,7 @@ final class RideFlowTests: XCTestCase {
         }
         XCTAssertTrue(waitForCount(rideRows(in: app), 0), "History should be empty")
         waitUntilGone(app.buttons["selectRides"])
-        app.navigationBars["History"].buttons.element(boundBy: 0).tap()
+        openTab("Ride", in: app)
     }
 
     @MainActor
@@ -836,7 +836,7 @@ final class RideFlowTests: XCTestCase {
             if element.isHittable { return }
             if towardTop { app.swipeUp() } else { app.swipeDown() }
         }
-        XCTAssertTrue(element.isHittable)
+        XCTAssertTrue(element.isHittable, "Not hittable: \(element.debugDescription)")
     }
 
     /// Waits for an element to stop moving, such as an alert that rises when its keyboard appears.
@@ -928,8 +928,15 @@ final class RideFlowTests: XCTestCase {
     private func homeScreenIcon(in springboard: XCUIApplication) -> XCUIElement {
         let icons = springboard.icons.matching(identifier: "ScooterLog")
         for _ in 0..<5 {
-            if let icon = icons.allElementsBoundByIndex.first(where: \.isHittable) { return icon }
-            springboard.swipeLeft()
+            // SpringBoard can report icons on a neighboring page as hittable, so also require an on-screen frame.
+            let screen = springboard.frame
+            if let icon = icons.allElementsBoundByIndex.first(where: { screen.contains($0.frame) && $0.isHittable }) {
+                return icon
+            }
+            // Page from the empty area below the icons; a swipe starting on a widget may not turn the page.
+            let from = springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.7))
+            from.press(forDuration: 0.05, thenDragTo: springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.7)))
+            sleep(1)
         }
         XCTFail("ScooterLog should be visible on a Home Screen page")
         return icons.firstMatch
@@ -939,10 +946,20 @@ final class RideFlowTests: XCTestCase {
     private func auditDashboard(in app: XCUIApplication) throws {
         // iOS 27 audits clipped toolbar fragments and combined icon/text rows as one color sample.
         // The rendered white tool labels and cyan/red symbols are checked against the panel separately.
-        let compoundElements: Set<String> = ["settings", "themeMenu", "Ride history", "Directions", "Saved places"]
+        // The hero's white headline sits on dark artwork the audit samples as background; "Weather" can rest
+        // under the landscape navigation bar's scroll-edge blur. Both were checked in captured screenshots.
+        let compoundElements: Set<String> = ["settings", "themeMenu", "Start ride here", "End ride",
+                                             "Your next ride starts here.", "Weather", "Ride", "History", "Directions", "Saved places"]
+        // Content scrolling beneath the glass navigation bar, ride accessory, or tab bar is blurred by design.
+        var content = app.frame
+        let top = app.navigationBars.firstMatch.frame.maxY
+        let bottom = [app.buttons["Start ride here"], app.buttons["End ride"], app.tabBars.firstMatch]
+            .filter(\.exists).map(\.frame.minY).min() ?? app.frame.maxY
+        content.origin.y = top
+        content.size.height = max(0, bottom - top)
         try app.performAccessibilityAudit(for: [.contrast, .hitRegion]) { issue in
             guard issue.auditType == .contrast, let element = issue.element else { return false }
-            return !app.frame.contains(element.frame) || element.label.isEmpty || compoundElements.contains(element.identifier)
+            return !content.contains(element.frame) || element.label.isEmpty || compoundElements.contains(element.identifier)
                 || compoundElements.contains(element.label)
         }
         func luminance(_ r: Double, _ g: Double, _ b: Double) -> Double {

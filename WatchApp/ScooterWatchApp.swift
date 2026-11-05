@@ -4,6 +4,14 @@ import SwiftUI
 struct ScooterWatchApp: App {
     @StateObject private var controller = RideController.shared
 
+    init() {
+        StartRideControlIntent.handler = {
+            let controller = RideController.shared
+            guard controller.displayedRide == nil else { return }
+            controller.perform { try controller.start() }
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             #if DEBUG && targetEnvironment(simulator)

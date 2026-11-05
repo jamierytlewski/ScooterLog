@@ -585,6 +585,8 @@ struct DirectionsView: View {
     @ObservedObject var controller: RideController
     @ObservedObject private var model: DirectionsModel
     @State private var showingGuidance = false
+    // Directions is a tab root, so it reappears whenever guidance is popped; only reopen guidance it hasn't shown yet.
+    @State private var guidanceDismissed = false
     @State private var origin: PlaceChoice?
     @State private var mode = RouteMode.cycling
     @AppStorage("f3PlanningSpeedMPH") private var planningSpeed = 20.0
@@ -749,9 +751,17 @@ struct DirectionsView: View {
         .onChange(of: mode) { refresh() }
         .onChange(of: model.selectedRouteID) { camera = .automatic }
         .onDisappear { if !model.isGuiding { model.cancel() } }
-        .onAppear { showingGuidance = model.isGuiding }
-        .onChange(of: model.isGuiding) { _, guiding in showingGuidance = guiding }
-        .navigationDestination(isPresented: $showingGuidance) {
+        .onAppear { showingGuidance = model.isGuiding && !guidanceDismissed }
+        .onChange(of: model.isGuiding) { _, guiding in
+            guidanceDismissed = false
+            showingGuidance = guiding
+        }
+        .navigationDestination(isPresented: Binding(
+            get: { showingGuidance },
+            set: { showing in
+                if !showing && model.isGuiding { guidanceDismissed = true }
+                showingGuidance = showing
+            })) {
             TurnByTurnView(model: model, controller: controller, voiceGuidance: $voiceGuidance)
         }
         #if os(iOS)
@@ -955,6 +965,7 @@ struct TurnByTurnView: View {
         }
         .background(RideTheme.canvas)
         .navigationTitle("Turn-by-turn")
+        .hidesRideBar(reason: "turnByTurn")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

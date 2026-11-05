@@ -8,11 +8,21 @@
 
 /* Begin PBXBuildFile section */
 		0086049E73D099858DB51F6E /* ScooterLogApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D5D84073CE0C8F8AFC4C86 /* ScooterLogApp.swift */; };
+		04AD1A5E63F7E82274922372 /* RideWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DFAE77A9B3853DBBBE0E04C /* RideWidgets.swift */; };
+		05371A1249FABAE06529E336 /* RideWidgetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C071341CB2A1D7D4B3B8035 /* RideWidgetStore.swift */; };
 		0734437FD0F607BDA31338FB /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E1CD3C35BC8DC3C922316783 /* PrivacyInfo.xcprivacy */; };
 		0D7EB4683C77F5271E108FD0 /* RideTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A81D3BB550162F30D18A57A /* RideTheme.swift */; };
+		13F4F23E461873AA13B7C65B /* RideWeatherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E875ABE6F995F9A458C3806 /* RideWeatherService.swift */; };
+		178E196932F045BB8BBA65DB /* RideTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A81D3BB550162F30D18A57A /* RideTheme.swift */; };
+		17A2AEC5D29ED926254CAE77 /* RideWeatherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E875ABE6F995F9A458C3806 /* RideWeatherService.swift */; };
 		18A20BFA362C9AC029DCEFBE /* RideDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE329B9BCAD2567197CE3563 /* RideDashboard.swift */; };
+		29FF490638DA680406814504 /* StartRideControlIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80713AE834B3183E76B7C9BF /* StartRideControlIntent.swift */; };
+		2B95D4B239447B27FFADCA48 /* RideWidgetProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AB4370DE5612597835B2CB6 /* RideWidgetProvider.swift */; };
 		2CA8B54D7485153D90E4025F /* ScooterLiveActivity.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 33CB0780E7900DDF7FC6235D /* ScooterLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		37833B82D5DB602D114A29C8 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F874475C78CFE06A8EB339CE /* LiveActivityManager.swift */; };
+		37850545914FE873A3813EE0 /* StartRideControlIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80713AE834B3183E76B7C9BF /* StartRideControlIntent.swift */; };
+		3BDEDBB6C56D8E30CE7B366F /* ScooterWatchWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 37ACAEC5AFF6D426C719D07B /* ScooterWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		3FC4C56783CA6DD7273AE095 /* RideWeatherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD448EF75FB2F43BCB0F86F4 /* RideWeatherView.swift */; };
 		40918759F7837E16B2450B0E /* RideTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A81D3BB550162F30D18A57A /* RideTheme.swift */; };
 		472E8E5F2550DD4C514F48A5 /* ScooterLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8EDF7DC422D08C8FBCFF3FD /* ScooterLiveActivity.swift */; };
 		4F394D61A9C6AC99CA66D43C /* RideActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C04A5B1FBA44F1F3D694FE6 /* RideActivityAttributes.swift */; };
@@ -24,29 +34,51 @@
 		6C95789E5C04ABA37845406E /* SavedPlacesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67D1D68D312F05ABFFD4392D /* SavedPlacesView.swift */; };
 		6D8016EF28CF418247BBA4F2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9F63D7889E91C10B2633A29D /* Assets.xcassets */; };
 		6E7ACAFE9F3311620CF6540B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E1CD3C35BC8DC3C922316783 /* PrivacyInfo.xcprivacy */; };
+		73CA0F1D6E7F78EA9F57F829 /* ScooterWatchWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2FDB91D267433FCCD36E9D /* ScooterWatchWidgets.swift */; };
+		74666337A7D35CDCD50F76D7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E1CD3C35BC8DC3C922316783 /* PrivacyInfo.xcprivacy */; };
 		7A2E31AD595B6917A850C0B3 /* RideController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125F3B5377547197A4F82337 /* RideController.swift */; };
 		8CD36DF6FDD65FD847436093 /* RideDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE329B9BCAD2567197CE3563 /* RideDashboard.swift */; };
 		8F1E7ECFB6A9D4591314765C /* ScooterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0342FAA71038BAA8A73C8291 /* ScooterCore */; };
+		949A9AD585FB80DE5E6E9068 /* RideWidgetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C071341CB2A1D7D4B3B8035 /* RideWidgetStore.swift */; };
 		978686B4CAF05FF44F1B3E14 /* AppIcon.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D90EB74057930478B5049668 /* AppIcon.xcassets */; };
 		A210C2B35ABC2E2C5C2BD2C1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9F63D7889E91C10B2633A29D /* Assets.xcassets */; };
+		A42ABF0C32DB71F07C63B398 /* RideWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DFAE77A9B3853DBBBE0E04C /* RideWidgets.swift */; };
 		AE68D403D97C6305E80D1B47 /* RideActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C04A5B1FBA44F1F3D694FE6 /* RideActivityAttributes.swift */; };
 		B6B141054D55A9A520775204 /* HealthReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663A72BAA355B34FD498F326 /* HealthReader.swift */; };
+		BC9C65BDFF239FCE2C927341 /* StartRideControlIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80713AE834B3183E76B7C9BF /* StartRideControlIntent.swift */; };
+		BE1BF89B99FBE0A6A12080AE /* ScooterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 106AF46FBA5810E35663E10D /* ScooterCore */; };
 		C6D72E5F3653271E6868613D /* DirectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C856AADEC61D32C122D24A /* DirectionsView.swift */; };
+		CC125A0DA5908A295B54B764 /* RideWeatherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E875ABE6F995F9A458C3806 /* RideWeatherService.swift */; };
+		CC130EBDF7698A8EC2890247 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9F63D7889E91C10B2633A29D /* Assets.xcassets */; };
 		CCEBC9F4B04A1996D3870D80 /* ScooterWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1192E71FAD2CB5231E4BDDEC /* ScooterWatchApp.swift */; };
+		D27A1EE0A7002D2B6C17FE83 /* RideWeatherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD448EF75FB2F43BCB0F86F4 /* RideWeatherView.swift */; };
 		D4E728145F4D19CD6AB508C5 /* RideFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 056DF0FFA1C34B3F10CB87DB /* RideFlowTests.swift */; };
 		D653B4131B7319B77B5C8AA9 /* DirectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C856AADEC61D32C122D24A /* DirectionsView.swift */; };
+		D656DE83AD7D4ED01754BA2F /* StartRideControlIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80713AE834B3183E76B7C9BF /* StartRideControlIntent.swift */; };
 		D720520699542B68D54601BB /* ScooterWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 562228D553A7F896CAA50606 /* ScooterWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		DACECBC46A7C41705B473A00 /* RideTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A81D3BB550162F30D18A57A /* RideTheme.swift */; };
+		DAE0CACF512F9C3B4A8A0430 /* RideWidgetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C071341CB2A1D7D4B3B8035 /* RideWidgetStore.swift */; };
+		DDE01920057867228AAE02D5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E1CD3C35BC8DC3C922316783 /* PrivacyInfo.xcprivacy */; };
 		E0A49B0C6A85601BF424AEFB /* RideController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125F3B5377547197A4F82337 /* RideController.swift */; };
+		E1BDB4B2792C40B6490F6594 /* RideWidgetProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AB4370DE5612597835B2CB6 /* RideWidgetProvider.swift */; };
 		E4DCEC9393871488B9E396C8 /* ScooterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 415B67494CBA5C9553D7A11C /* ScooterCore */; };
 		E68D994F31FD4BE5CB18AEE6 /* ScooterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4BD326E61FEB5E774D8EDEC1 /* ScooterCore */; };
 		EDBF90D32DE8A5D10C9B9E57 /* PlaceSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D0E5914FBC947D39981CA5 /* PlaceSearch.swift */; };
 		EE21FDBBB9074438762D8060 /* SavedPlacesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67D1D68D312F05ABFFD4392D /* SavedPlacesView.swift */; };
+		EE85DB5D6F7DE2A7C7E9DC02 /* RideWeatherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E875ABE6F995F9A458C3806 /* RideWeatherService.swift */; };
+		EF6F20A44FCA979CB7710008 /* RideWidgetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C071341CB2A1D7D4B3B8035 /* RideWidgetStore.swift */; };
 		F87CC398ED4FCF04DE07EEC3 /* PlaceSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D0E5914FBC947D39981CA5 /* PlaceSearch.swift */; };
 		FEBAD9F815232C66F4B8E9B5 /* AppIcon.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D90EB74057930478B5049668 /* AppIcon.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		4FEFB58BB5696FBA50828BB3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FF4879D6C7548BBD23623A13 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3CDD72CA35B4BC3D136381F3;
+			remoteInfo = ScooterWatchWidgets;
+		};
 		5B4AE7BCAF73BE8E0708CAF2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = FF4879D6C7548BBD23623A13 /* Project object */;
@@ -82,6 +114,17 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		54D9BFDC928EC796001A7DA9 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				3BDEDBB6C56D8E30CE7B366F /* ScooterWatchWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		BA3A4A5F28FA889CE40B6E6A /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -97,24 +140,32 @@
 
 /* Begin PBXFileReference section */
 		056DF0FFA1C34B3F10CB87DB /* RideFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideFlowTests.swift; sourceTree = "<group>"; };
+		0AB4370DE5612597835B2CB6 /* RideWidgetProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideWidgetProvider.swift; sourceTree = "<group>"; };
+		0DFAE77A9B3853DBBBE0E04C /* RideWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideWidgets.swift; sourceTree = "<group>"; };
 		1192E71FAD2CB5231E4BDDEC /* ScooterWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScooterWatchApp.swift; sourceTree = "<group>"; };
 		11C856AADEC61D32C122D24A /* DirectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectionsView.swift; sourceTree = "<group>"; };
 		125F3B5377547197A4F82337 /* RideController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideController.swift; sourceTree = "<group>"; };
 		26D5D84073CE0C8F8AFC4C86 /* ScooterLogApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScooterLogApp.swift; sourceTree = "<group>"; };
 		2B533FDC214299797A5009DC /* jamierytlewski-crispy-eureka */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "jamierytlewski-crispy-eureka"; path = .; sourceTree = SOURCE_ROOT; };
 		33CB0780E7900DDF7FC6235D /* ScooterLiveActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ScooterLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		37ACAEC5AFF6D426C719D07B /* ScooterWatchWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ScooterWatchWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		3E875ABE6F995F9A458C3806 /* RideWeatherService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideWeatherService.swift; sourceTree = "<group>"; };
 		45D0E5914FBC947D39981CA5 /* PlaceSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceSearch.swift; sourceTree = "<group>"; };
 		562228D553A7F896CAA50606 /* ScooterWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScooterWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C04A5B1FBA44F1F3D694FE6 /* RideActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideActivityAttributes.swift; sourceTree = "<group>"; };
+		5C071341CB2A1D7D4B3B8035 /* RideWidgetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideWidgetStore.swift; sourceTree = "<group>"; };
 		663A72BAA355B34FD498F326 /* HealthReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthReader.swift; sourceTree = "<group>"; };
 		67D1D68D312F05ABFFD4392D /* SavedPlacesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPlacesView.swift; sourceTree = "<group>"; };
 		6A81D3BB550162F30D18A57A /* RideTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideTheme.swift; sourceTree = "<group>"; };
 		71241BAB06ADA60CB076196F /* ScooterLogUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScooterLogUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7D2FDB91D267433FCCD36E9D /* ScooterWatchWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScooterWatchWidgets.swift; sourceTree = "<group>"; };
+		80713AE834B3183E76B7C9BF /* StartRideControlIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartRideControlIntent.swift; sourceTree = "<group>"; };
 		8E672D362BACD28E2DA3CDBF /* CloudRideSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudRideSync.swift; sourceTree = "<group>"; };
 		9F63D7889E91C10B2633A29D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9FEB11418A52807311A182B1 /* ScooterLog.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScooterLog.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D90EB74057930478B5049668 /* AppIcon.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = AppIcon.xcassets; sourceTree = "<group>"; };
 		DAEB2528B14C3F6E28F641AC /* RideIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideIntents.swift; sourceTree = "<group>"; };
+		DD448EF75FB2F43BCB0F86F4 /* RideWeatherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideWeatherView.swift; sourceTree = "<group>"; };
 		E1CD3C35BC8DC3C922316783 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		E8EDF7DC422D08C8FBCFF3FD /* ScooterLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScooterLiveActivity.swift; sourceTree = "<group>"; };
 		F874475C78CFE06A8EB339CE /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
@@ -146,6 +197,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E81BF48D357B53A7D6EB4955 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BE1BF89B99FBE0A6A12080AE /* ScooterCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -157,6 +216,15 @@
 				26D5D84073CE0C8F8AFC4C86 /* ScooterLogApp.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		39B889CCD920FBC81413172B /* Widgets */ = {
+			isa = PBXGroup;
+			children = (
+				0AB4370DE5612597835B2CB6 /* RideWidgetProvider.swift */,
+				0DFAE77A9B3853DBBBE0E04C /* RideWidgets.swift */,
+			);
+			path = Widgets;
 			sourceTree = "<group>";
 		};
 		4BE53DE3FBDCE091E9402C4E /* UITests */ = {
@@ -185,8 +253,18 @@
 				E9346F255A99E11503959F04 /* Shared */,
 				4BE53DE3FBDCE091E9402C4E /* UITests */,
 				AC399CD8733AA9DB56C86D69 /* WatchApp */,
+				71B98E2AA10826994FBEBD76 /* WatchWidgets */,
+				39B889CCD920FBC81413172B /* Widgets */,
 				8358381D3524D8433F481E00 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		71B98E2AA10826994FBEBD76 /* WatchWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				7D2FDB91D267433FCCD36E9D /* ScooterWatchWidgets.swift */,
+			);
+			path = WatchWidgets;
 			sourceTree = "<group>";
 		};
 		8358381D3524D8433F481E00 /* Products */ = {
@@ -196,6 +274,7 @@
 				9FEB11418A52807311A182B1 /* ScooterLog.app */,
 				71241BAB06ADA60CB076196F /* ScooterLogUITests.xctest */,
 				562228D553A7F896CAA50606 /* ScooterWatch.app */,
+				37ACAEC5AFF6D426C719D07B /* ScooterWatchWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -229,7 +308,11 @@
 				FE329B9BCAD2567197CE3563 /* RideDashboard.swift */,
 				DAEB2528B14C3F6E28F641AC /* RideIntents.swift */,
 				6A81D3BB550162F30D18A57A /* RideTheme.swift */,
+				3E875ABE6F995F9A458C3806 /* RideWeatherService.swift */,
+				DD448EF75FB2F43BCB0F86F4 /* RideWeatherView.swift */,
+				5C071341CB2A1D7D4B3B8035 /* RideWidgetStore.swift */,
 				67D1D68D312F05ABFFD4392D /* SavedPlacesView.swift */,
+				80713AE834B3183E76B7C9BF /* StartRideControlIntent.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -262,10 +345,12 @@
 				DEF0C9420C19619CFE1D2189 /* Sources */,
 				8071355EDDFE4871680D7048 /* Resources */,
 				47EB12E3E9159EBA0E10ADC0 /* Frameworks */,
+				54D9BFDC928EC796001A7DA9 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				CE7289C621B277B65014AC49 /* PBXTargetDependency */,
 			);
 			name = ScooterWatch;
 			packageProductDependencies = (
@@ -274,6 +359,26 @@
 			productName = ScooterWatch;
 			productReference = 562228D553A7F896CAA50606 /* ScooterWatch.app */;
 			productType = "com.apple.product-type.application";
+		};
+		3CDD72CA35B4BC3D136381F3 /* ScooterWatchWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 869087390BCED248ED950B5A /* Build configuration list for PBXNativeTarget "ScooterWatchWidgets" */;
+			buildPhases = (
+				992E6238407A2C9D2513222C /* Sources */,
+				8BA2C7ADF2FC07828B489DA2 /* Resources */,
+				E81BF48D357B53A7D6EB4955 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ScooterWatchWidgets;
+			packageProductDependencies = (
+				106AF46FBA5810E35663E10D /* ScooterCore */,
+			);
+			productName = ScooterWatchWidgets;
+			productReference = 37ACAEC5AFF6D426C719D07B /* ScooterWatchWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 		BC8D38FDA2A8FF47AF8C7EA6 /* ScooterLiveActivity */ = {
 			isa = PBXNativeTarget;
@@ -335,6 +440,9 @@
 					1D86264E9F22218F4EF7094F = {
 						ProvisioningStyle = Automatic;
 					};
+					3CDD72CA35B4BC3D136381F3 = {
+						ProvisioningStyle = Automatic;
+					};
 					BC8D38FDA2A8FF47AF8C7EA6 = {
 						ProvisioningStyle = Automatic;
 					};
@@ -360,6 +468,7 @@
 				D4496E07AB44C6709F761CE8 /* ScooterLog */,
 				1D86264E9F22218F4EF7094F /* ScooterWatch */,
 				BC8D38FDA2A8FF47AF8C7EA6 /* ScooterLiveActivity */,
+				3CDD72CA35B4BC3D136381F3 /* ScooterWatchWidgets */,
 				0C65AB27FB698DBBEF37627D /* ScooterLogUITests */,
 			);
 		};
@@ -386,11 +495,21 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8BA2C7ADF2FC07828B489DA2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CC130EBDF7698A8EC2890247 /* Assets.xcassets in Resources */,
+				74666337A7D35CDCD50F76D7 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		EBD50C949EDD6225097C5B6B /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				69A55CCDCF6EF6C685BA3382 /* Assets.xcassets in Resources */,
+				DDE01920057867228AAE02D5 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -405,13 +524,32 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		992E6238407A2C9D2513222C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				178E196932F045BB8BBA65DB /* RideTheme.swift in Sources */,
+				CC125A0DA5908A295B54B764 /* RideWeatherService.swift in Sources */,
+				E1BDB4B2792C40B6490F6594 /* RideWidgetProvider.swift in Sources */,
+				949A9AD585FB80DE5E6E9068 /* RideWidgetStore.swift in Sources */,
+				A42ABF0C32DB71F07C63B398 /* RideWidgets.swift in Sources */,
+				73CA0F1D6E7F78EA9F57F829 /* ScooterWatchWidgets.swift in Sources */,
+				D656DE83AD7D4ED01754BA2F /* StartRideControlIntent.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DB6D58D4B8B517588EDB05FD /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				AE68D403D97C6305E80D1B47 /* RideActivityAttributes.swift in Sources */,
 				40918759F7837E16B2450B0E /* RideTheme.swift in Sources */,
+				EE85DB5D6F7DE2A7C7E9DC02 /* RideWeatherService.swift in Sources */,
+				2B95D4B239447B27FFADCA48 /* RideWidgetProvider.swift in Sources */,
+				DAE0CACF512F9C3B4A8A0430 /* RideWidgetStore.swift in Sources */,
+				04AD1A5E63F7E82274922372 /* RideWidgets.swift in Sources */,
 				472E8E5F2550DD4C514F48A5 /* ScooterLiveActivity.swift in Sources */,
+				BC9C65BDFF239FCE2C927341 /* StartRideControlIntent.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -429,8 +567,12 @@
 				8CD36DF6FDD65FD847436093 /* RideDashboard.swift in Sources */,
 				66628ED85C95DA86C59D21EE /* RideIntents.swift in Sources */,
 				0D7EB4683C77F5271E108FD0 /* RideTheme.swift in Sources */,
+				13F4F23E461873AA13B7C65B /* RideWeatherService.swift in Sources */,
+				D27A1EE0A7002D2B6C17FE83 /* RideWeatherView.swift in Sources */,
+				05371A1249FABAE06529E336 /* RideWidgetStore.swift in Sources */,
 				6C95789E5C04ABA37845406E /* SavedPlacesView.swift in Sources */,
 				0086049E73D099858DB51F6E /* ScooterLogApp.swift in Sources */,
+				29FF490638DA680406814504 /* StartRideControlIntent.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -445,8 +587,12 @@
 				18A20BFA362C9AC029DCEFBE /* RideDashboard.swift in Sources */,
 				58C4F23D92DDC61AC784EDE6 /* RideIntents.swift in Sources */,
 				DACECBC46A7C41705B473A00 /* RideTheme.swift in Sources */,
+				17A2AEC5D29ED926254CAE77 /* RideWeatherService.swift in Sources */,
+				3FC4C56783CA6DD7273AE095 /* RideWeatherView.swift in Sources */,
+				EF6F20A44FCA979CB7710008 /* RideWidgetStore.swift in Sources */,
 				EE21FDBBB9074438762D8060 /* SavedPlacesView.swift in Sources */,
 				CCEBC9F4B04A1996D3870D80 /* ScooterWatchApp.swift in Sources */,
+				37850545914FE873A3813EE0 /* StartRideControlIntent.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -462,6 +608,11 @@
 			isa = PBXTargetDependency;
 			target = 1D86264E9F22218F4EF7094F /* ScooterWatch */;
 			targetProxy = 5B4AE7BCAF73BE8E0708CAF2 /* PBXContainerItemProxy */;
+		};
+		CE7289C621B277B65014AC49 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3CDD72CA35B4BC3D136381F3 /* ScooterWatchWidgets */;
+			targetProxy = 4FEFB58BB5696FBA50828BB3 /* PBXContainerItemProxy */;
 		};
 		E8724AE6350776A94697CFD4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -514,6 +665,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEVELOPMENT_TEAM = D49TW4U996;
+				CODE_SIGN_ENTITLEMENTS = Configuration/Activity.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Configuration/Activity-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -625,6 +777,25 @@
 			};
 			name = Debug;
 		};
+		40FFBABB612C3B1EC2D57CC7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEVELOPMENT_TEAM = D49TW4U996;
+				CODE_SIGN_ENTITLEMENTS = Configuration/WatchWidgets.entitlements;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Configuration/WatchWidgets-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jamierytlewski.scooterlog.watchkitapp.widgets;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Release;
+		};
 		5E9226AFE95FBA1F759F4E3C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -718,6 +889,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEVELOPMENT_TEAM = D49TW4U996;
+				CODE_SIGN_ENTITLEMENTS = Configuration/Activity.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Configuration/Activity-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -756,6 +928,25 @@
 			};
 			name = Release;
 		};
+		E7908BFE456B35D31EE7DFC8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEVELOPMENT_TEAM = D49TW4U996;
+				CODE_SIGN_ENTITLEMENTS = Configuration/WatchWidgets.entitlements;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Configuration/WatchWidgets-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jamierytlewski.scooterlog.watchkitapp.widgets;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -764,6 +955,15 @@
 			buildConfigurations = (
 				237595738E7D1F4375B89305 /* Debug */,
 				AFC22DAD058A3D4629F15B96 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		869087390BCED248ED950B5A /* Build configuration list for PBXNativeTarget "ScooterWatchWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E7908BFE456B35D31EE7DFC8 /* Debug */,
+				40FFBABB612C3B1EC2D57CC7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -815,6 +1015,10 @@
 
 /* Begin XCSwiftPackageProductDependency section */
 		0342FAA71038BAA8A73C8291 /* ScooterCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ScooterCore;
+		};
+		106AF46FBA5810E35663E10D /* ScooterCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ScooterCore;
 		};

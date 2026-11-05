@@ -30,6 +30,10 @@ struct RideDashboard: View {
     @ObservedObject private var directions: DirectionsModel
     @AppStorage("directionsVoiceGuidance") private var voiceGuidance = true
     @StateObject private var health = HealthReader.shared
+    @StateObject private var weather = RideWeatherModel()
+    @StateObject private var widgets = RideWidgetPublisher()
+    @AppStorage(RideWidgetSnapshot.goalKey, store: RideWidgetStore.defaults)
+    private var weeklyGoal = RideWidgetSnapshot.defaultGoalMiles
     #if os(iOS)
     @StateObject private var cloud = CloudRideSync()
     #endif
@@ -42,6 +46,8 @@ struct RideDashboard: View {
     @State private var showActiveRideNotice = false
     #if os(iOS)
     @ObservedObject private var homeScreen = HomeScreenActions.shared
+    @State private var tab: DashboardTab = .ride
+    @State private var rideBarHiders: Set<String> = []
     #endif
     @AppStorage(RideTheme.preferenceKey) private var theme: RideTheme = .tronBlue
     @Environment(\.scenePhase) private var scenePhase
@@ -55,10 +61,52 @@ struct RideDashboard: View {
     }
 
     var body: some View {
+        #if os(iOS)
+        TabView(selection: $tab) {
+            Tab("Ride", systemImage: "scooter", value: .ride) { dashboard }
+            Tab("History", systemImage: "clock.arrow.circlepath", value: .history) {
+                NavigationStack { HistoryView(controller: controller) }
+            }
+            Tab("Directions", systemImage: "arrow.turn.up.right", value: .directions) {
+                NavigationStack { directionsView }
+            }
+            Tab("Saved places", systemImage: "mappin.and.ellipse", value: .places) {
+                NavigationStack { SavedPlacesView(controller: controller) }
+            }
+        }
+        .tabViewBottomAccessory(isEnabled: rideBarHiders.isEmpty) { rideAccessory }
+        .environment(\.setRideBarHidden) { reason, hidden in
+            if hidden { rideBarHiders.insert(reason) } else { rideBarHiders.remove(reason) }
+        }
+        .tint(theme.color)
+        .modifier(endRideConfirmation)
+        #else
+        dashboard.modifier(endRideConfirmation)
+        #endif
+    }
+
+    private var endRideConfirmation: EndRideConfirmation {
+        EndRideConfirmation(isPresented: $confirmEnd) {
+            if controller.isRemote { controller.endRemote() }
+            else { controller.perform { try controller.end() } }
+        }
+    }
+
+    @ViewBuilder private var directionsView: some View {
+        if controller.isRemote {
+            CompanionDirectionsView(controller: controller)
+        } else {
+            DirectionsView(controller: controller)
+        }
+    }
+
+    private var dashboard: some View {
         NavigationStack {
             List {
                 guidanceSection
+                if controller.displayedRide == nil { weatherSection }
                 rideSection
+                if controller.displayedRide != nil { weatherSection }
                 if (controller.archive.active != nil && controller.peer?.ride != nil)
                     || (!controller.reachable && controller.peer?.ride != nil) || controller.errorMessage != nil {
                     Section {
@@ -77,7 +125,6 @@ struct RideDashboard: View {
                         Text("Needs attention").foregroundStyle(RideTheme.secondaryText)
                     }
                 }
-                toolsSection
                 #if os(iOS)
                 if controller.locationAuthorization != .authorizedWhenInUse
                     && controller.locationAuthorization != .authorizedAlways {
@@ -85,14 +132,19 @@ struct RideDashboard: View {
                 }
                 if health.enabled { healthSection }
                 #else
+                toolsSection
                 locationSection
                 healthSection
                 appearanceSection
+                widgetsSection
                 privacyAndSupportSection
                 #endif
             }
             .rideSurface()
             .navigationTitle("ScooterLog")
+            #if os(watchOS)
+            .toolbar { rideActionToolbar }
+            #endif
             #if os(iOS)
             .listStyle(.plain)
             .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20))
@@ -115,6 +167,7 @@ struct RideDashboard: View {
                 NavigationStack {
                     List {
                         appearanceSection
+                        widgetsSection
                         locationSection
                         healthSection
                         CloudSyncView(controller: controller, cloud: cloud)
@@ -139,17 +192,18 @@ struct RideDashboard: View {
                 Text("Continue it here or end it on its recording device before starting a new ride.")
             }
             #endif
-            .confirmationDialog("End and save this ride?", isPresented: $confirmEnd, titleVisibility: .visible) {
-                Button("End ride", role: .destructive) {
-                    if controller.isRemote { controller.endRemote() }
-                    else { controller.perform { try controller.end() } }
-                }
-                Button("Cancel", role: .cancel) {}
+            .onChange(of: theme) {
+                controller.refreshLiveActivityAppearance()
+                publishWidgets()
             }
-            .onChange(of: theme) { controller.refreshLiveActivityAppearance() }
+            .onChange(of: weeklyGoal) { publishWidgets() }
+            .onChange(of: weather.widgetWeather) { publishWidgets() }
+            .onReceive(controller.$archive) { publishWidgets($0) }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
                     health.refresh()
+                    weather.refresh()
+                    publishWidgets()
                     controller.refreshConnection()
                     #if os(iOS)
                     handleHomeScreenStart()
@@ -204,6 +258,10 @@ struct RideDashboard: View {
         }
     }
 
+    private var weatherSection: some View {
+        RideWeatherSection(model: weather, locationAuthorization: controller.locationAuthorization)
+    }
+
     private var rideSection: some View {
         Section {
             if dynamicTypeSize.isAccessibilitySize { controls }
@@ -235,13 +293,7 @@ struct RideDashboard: View {
             NavigationLink { HistoryView(controller: controller) } label: {
                 toolLabel("Ride history", systemImage: "clock.arrow.circlepath")
             }
-            NavigationLink {
-                if controller.isRemote {
-                    CompanionDirectionsView(controller: controller)
-                } else {
-                    DirectionsView(controller: controller)
-                }
-            } label: {
+            NavigationLink { directionsView } label: {
                 toolLabel("Directions", systemImage: "arrow.turn.up.right")
             }
             NavigationLink { SavedPlacesView(controller: controller) } label: {
@@ -259,6 +311,7 @@ struct RideDashboard: View {
         guard UIApplication.shared.applicationState == .active, homeScreen.startRequested else { return }
         showSettings = false
         navigationID = UUID()
+        tab = .ride
         homeScreen.startRequested = false
         guard controller.displayedRide == nil else {
             showActiveRideNotice = true
@@ -322,6 +375,25 @@ struct RideDashboard: View {
         } header: {
             Text("Appearance").foregroundStyle(RideTheme.secondaryText)
         }
+    }
+
+    private var widgetsSection: some View {
+        Section {
+            Stepper(value: $weeklyGoal, in: RideWidgetSnapshot.goalRange, step: 5) {
+                LabeledContent("Weekly goal", value: "\(Int(weeklyGoal)) mi")
+            }
+            .accessibilityIdentifier("weeklyGoal")
+        } header: {
+            Text("Widgets").foregroundStyle(RideTheme.secondaryText)
+        } footer: {
+            Text("Used by the weekly goal widget on this device.").foregroundStyle(RideTheme.secondaryText)
+        }
+    }
+
+    private func publishWidgets(_ archive: RideArchive? = nil) {
+        let archive = archive ?? controller.archive
+        widgets.publish(rides: archive.completed, rideActive: controller.displayedRide != nil || archive.active != nil,
+                        goalMiles: weeklyGoal, weather: weather.widgetWeather, theme: theme.rawValue)
     }
 
     private func toolLabel(_ title: LocalizedStringKey, systemImage: String) -> some View {
@@ -483,52 +555,98 @@ struct RideDashboard: View {
         .accessibilityValue(value)
     }
 
+    /// Start and End live in the bottom toolbar; only an interrupted ride's Resume stays inline.
     @ViewBuilder private var controls: some View {
-        if controller.displayedRide == nil {
-#if os(watchOS)
-            HStack {
-                Spacer(minLength: 0)
-                startRideButton
-                Spacer(minLength: 0)
+        if controller.displayedRide != nil, !controller.isRemote, !controller.recording {
+            Button { controller.perform { try controller.start() } } label: {
+                actionLabel("Resume recording", systemImage: "play.fill")
             }
+            .buttonStyle(RidePrimaryButtonStyle())
+            .foregroundStyle(Color("OnRideAccent"))
+            #if os(watchOS)
             .listRowBackground(Color.clear)
-#else
-            startRideButton
-#endif
-        } else {
-            if !controller.isRemote && !controller.recording {
-                Button { controller.perform { try controller.start() } } label: {
-                    actionLabel("Resume recording", systemImage: "play.fill")
-                }
-                .buttonStyle(RidePrimaryButtonStyle())
-                .foregroundStyle(Color("OnRideAccent"))
-                #if os(watchOS)
-                .listRowBackground(Color.clear)
-                #endif
-            }
-            Button(role: .destructive) { confirmEnd = true } label: {
-                actionLabel(controller.commandPending ? "Waiting for owner..." : "End ride", systemImage: "stop.fill")
-            }
-                .buttonStyle(.bordered)
-                .tint(.red)
-                .disabled(controller.commandPending || (controller.isRemote && !controller.reachable))
-                #if os(watchOS)
-                .listRowBackground(Color.clear)
-                #endif
+            #endif
         }
     }
 
-    private var startRideButton: some View {
-        Button { controller.perform { try controller.start() } } label: {
-#if os(watchOS)
-            actionLabel("Start ride here", systemImage: "play.fill", fillsWidth: false)
-#else
-            actionLabel("Start ride here", systemImage: "play.fill")
-#endif
+    #if os(iOS)
+    /// Lives above the tab bar on every tab, like a Now Playing bar: Start, or live stats with End.
+    private var rideAccessory: some View {
+        // System bars cap text size; the Large Content Viewer covers larger accessibility sizes.
+        rideAccessoryContent
+            .controlSize(.large)
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+            .accessibilityShowsLargeContentViewer()
+    }
+
+    @ViewBuilder private var rideAccessoryContent: some View {
+        if let ride = controller.displayedRide {
+            HStack(spacing: 12) {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    HStack(spacing: 6) {
+                        Image(systemName: controller.recording || controller.isRemote ? "record.circle" : "pause.circle")
+                            .foregroundStyle(theme.color)
+                        Text(RideFormat.duration(ride.elapsed(at: context.date)))
+                        Text("·").foregroundStyle(.secondary)
+                        Text(RideFormat.distance(ride.distance))
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Ride in progress")
+                    .accessibilityValue("\(RideFormat.spokenDuration(ride.elapsed(at: context.date))), \(RideFormat.distance(ride.distance))")
+                }
+                .contentShape(.rect)
+                .onTapGesture { tab = .ride }
+                Spacer(minLength: 0)
+                rideActionButton
+            }
+            .padding(.leading, 16)
+            .padding(.trailing, 6)
+        } else {
+            rideActionButton.padding(.horizontal, 6)
         }
-        .buttonStyle(RidePrimaryButtonStyle())
-        .foregroundStyle(Color("OnRideAccent"))
-        .listRowBackground(Color.clear)
+    }
+    #else
+    @ToolbarContentBuilder private var rideActionToolbar: some ToolbarContent {
+        ToolbarItem(placement: .bottomBar) { rideActionButton }
+    }
+    #endif
+
+    private var wideAction: CGFloat? {
+        #if os(iOS)
+        .infinity
+        #else
+        nil
+        #endif
+    }
+
+    /// The primary ride action, drawn on system Liquid Glass: the theme accent to start, red to end.
+    @ViewBuilder private var rideActionButton: some View {
+        if controller.displayedRide == nil {
+            Button {
+                #if os(iOS)
+                tab = .ride
+                #endif
+                controller.perform { try controller.start() }
+            } label: {
+                Label("Start ride here", systemImage: "play.fill").frame(maxWidth: wideAction)
+            }
+            .buttonStyle(.glassProminent)
+            .tint(theme.color)
+            .foregroundStyle(Color("OnRideAccent"))
+            .labelStyle(.titleAndIcon)
+        } else {
+            Button(role: .destructive) { confirmEnd = true } label: {
+                Label(controller.commandPending ? "Waiting for owner..." : "End ride", systemImage: "stop.fill")
+            }
+            .buttonStyle(.glassProminent)
+            .tint(.red)
+            .labelStyle(.titleAndIcon)
+            .disabled(controller.commandPending || (controller.isRemote && !controller.reachable))
+        }
     }
 
     private func actionLabel(
@@ -699,6 +817,8 @@ struct HistoryView: View {
                 }
             }
             .environment(\.editMode, $editMode)
+            // Like Photos, selection swaps the tab bar for its Select all / Delete bar.
+            .hidesRideBar(editMode.isEditing, reason: "historySelection")
             .onChange(of: rideIDs) { _, ids in
                 selection.formIntersection(ids)
                 if ids.isEmpty { editMode = .inactive }
@@ -901,13 +1021,7 @@ struct RideDetail: View {
     let ride: Ride
     @ObservedObject var controller: RideController
     @State private var confirmDeletion = false
-    @State private var showSpeedMap: Bool = {
-        #if DEBUG && targetEnvironment(simulator) && os(watchOS)
-        ProcessInfo.processInfo.environment["SCOOTERLOG_CAPTURE_SCREEN"] == "heat-map"
-        #else
-        false
-        #endif
-    }()
+    @State private var showSpeedMap = true
     @State private var visibleMapCamera: MapCamera?
     @Environment(\.dismiss) private var dismiss
 
@@ -1034,5 +1148,50 @@ private extension RideSpeedBand {
         case .fast: "Red: 15 mph or more"
         case .unknown: "Gray: speed unavailable"
         }
+    }
+}
+
+#if os(iOS)
+private enum DashboardTab: Hashable {
+    case ride, history, directions, places
+}
+#endif
+
+private struct EndRideConfirmation: ViewModifier {
+    @Binding var isPresented: Bool
+    let end: () -> Void
+
+    func body(content: Content) -> some View {
+        content.confirmationDialog("End and save this ride?", isPresented: $isPresented, titleVisibility: .visible) {
+            Button("End ride", role: .destructive, action: end)
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+}
+
+extension EnvironmentValues {
+    /// Lets a focused screen hide the iPhone tab bar and its Start/End accessory.
+    @Entry var setRideBarHidden: (_ reason: String, _ hidden: Bool) -> Void = { _, _ in }
+}
+
+extension View {
+    func hidesRideBar(_ hidden: Bool = true, reason: String) -> some View {
+        modifier(RideBarHiding(hidden: hidden, reason: reason))
+    }
+}
+
+private struct RideBarHiding: ViewModifier {
+    let hidden: Bool
+    let reason: String
+    @Environment(\.setRideBarHidden) private var setHidden
+
+    func body(content: Content) -> some View {
+        content
+            #if os(iOS)
+            .toolbarVisibility(hidden ? .hidden : .automatic, for: .tabBar)
+            #endif
+            .onAppear { setHidden(reason, hidden) }
+            .onChange(of: hidden) { _, hidden in setHidden(reason, hidden) }
+            .onDisappear { setHidden(reason, false) }
     }
 }

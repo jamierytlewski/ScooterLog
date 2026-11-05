@@ -26,6 +26,7 @@
       <ul>
         <li><a href="#location">Location and ride history</a></li>
         <li><a href="#health">Optional heart rate</a></li>
+        <li><a href="#weather">Weather and widgets</a></li>
         <li><a href="#maps">Apple Maps and directions</a></li>
         <li><a href="#icloud">Optional private iCloud sync</a></li>
         <li><a href="#choices">Sharing, retention, and deletion</a></li>
@@ -43,6 +44,9 @@
     <p>Heart-rate access is off until you choose to enable it and authorize HealthKit access. The app can show a recent readable heart-rate sample and its measurement time. This does not guarantee continuous or current readings.</p>
     <p>On Apple Watch, a separately confirmed live-heart-rate option starts an <strong>Other workout session</strong> to obtain sensor readings. ScooterLog ends that session and discards its workout builder without saving a completed workout. watchOS may nevertheless retain Health samples or affect activity rings. Ending GPS recording also ends this optional session.</p>
     <p>ScooterLog does not include heart-rate readings in ride files, companion transfers, iCloud uploads, or JSON/GPX exports. It does not send Health data to the developer or use it for advertising. You can turn the display off in the app and manage or revoke Health permissions in Apple's Health or Settings apps. Health information already retained by watchOS is managed separately there. ScooterLog is not a medical, diagnostic, or emergency-monitoring service.</p>
+
+    <h2 id="weather">Weather and widgets</h2>
+    <p>The dashboard and the Scooter weather widget request a forecast for your current location from Apple WeatherKit so ScooterLog can warn about rain, ice, snow and other conditions. That request sends your location to Apple and is handled under <a href="https://www.apple.com/legal/privacy/">Apple's privacy policy</a>. To show widgets, ScooterLog keeps a small summary on each device in storage shared only with its own widgets: weekly and monthly distance, your last ride's totals, the hours you usually ride, your weekly goal and the latest weather result with a location rounded to about 1 km. This summary is not sent to the developer.</p>
 
     <h2 id="maps">Apple Maps and directions</h2>
     <p>Maps, place search, route calculation, and rerouting use Apple's MapKit services. Place search sends the text you type, including partial text for suggestions, and, when available, a search area near your last known location to Apple. Directions send the selected origin, destination, and routing mode. Rerouting can send an updated origin based on your current location. Displaying maps also involves requests to Apple.</p>
