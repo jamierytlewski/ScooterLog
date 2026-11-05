@@ -93,16 +93,7 @@ private struct RideActivityView: View {
     var body: some View {
         Group {
             if family == .small {
-                VStack(alignment: .leading, spacing: 4) {
-                    Label { Text("ScooterLog") } icon: { RideActivitySymbol(context: context) }
-                        .font(.caption)
-                    RideElapsed(context: context).font(.headline.monospacedDigit())
-                        .foregroundStyle((context.state.theme ?? .tronBlue).color)
-                    Text(RideUnits.distance(context.state.distance))
-                        .font(.title3.monospacedDigit())
-                        .accessibilityLabel("Distance \(RideUnits.distance(context.state.distance))")
-                    status.font(.caption)
-                }
+                smallView
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -122,11 +113,35 @@ private struct RideActivityView: View {
                     Text(isStale ? "Open app for current metrics" : "Stopped estimate: \(Int(context.state.stopped)) sec")
                         .font(.caption)
                 }
+                .padding()
             }
         }
-        .padding()
         .activitySystemActionForegroundColor((context.state.theme ?? .tronBlue).color)
         .foregroundStyle(.primary)
+    }
+
+    /// Watch Smart Stack and CarPlay: two short lines inside the system margins.
+    private var smallView: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+                RideActivitySymbol(context: context)
+                RideElapsed(context: context)
+                    .foregroundStyle((context.state.theme ?? .tronBlue).color)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: 0)
+                if context.state.endedAt != nil {
+                    Image(systemName: "checkmark.circle").accessibilityLabel("Saved")
+                }
+            }
+            .font(.headline.monospacedDigit())
+            Text(isStale ? "GPS stale" : RideUnits.distance(context.state.distance))
+                .font(.title3.weight(.semibold).monospacedDigit())
+                .accessibilityLabel(isStale ? "Distance unavailable, GPS stale"
+                                    : "Distance \(RideUnits.distance(context.state.distance))")
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var isStale: Bool { context.state.endedAt == nil && context.isStale }
@@ -136,3 +151,12 @@ private struct RideActivityView: View {
               systemImage: context.state.endedAt != nil ? "checkmark.circle" : isStale ? "location.slash" : "record.circle")
     }
 }
+
+#if DEBUG
+#Preview("Ride", as: .content, using: RideActivityAttributes(rideID: UUID(), startedAt: .now.addingTimeInterval(-3_725), owner: "iPhone")) {
+    ScooterRideWidget()
+} contentStates: {
+    RideActivityAttributes.ContentState(distance: 12_874, speed: 6.2, stopped: 95, updatedAt: .now, endedAt: nil, theme: nil)
+    RideActivityAttributes.ContentState(distance: 12_874, speed: nil, stopped: 95, updatedAt: .now, endedAt: .now, theme: nil)
+}
+#endif

@@ -502,6 +502,9 @@ struct RideDashboard: View {
                 }
                 .buttonStyle(RidePrimaryButtonStyle())
                 .foregroundStyle(Color("OnRideAccent"))
+                #if os(watchOS)
+                .listRowBackground(Color.clear)
+                #endif
             }
             Button(role: .destructive) { confirmEnd = true } label: {
                 actionLabel(controller.commandPending ? "Waiting for owner..." : "End ride", systemImage: "stop.fill")
@@ -509,6 +512,9 @@ struct RideDashboard: View {
                 .buttonStyle(.bordered)
                 .tint(.red)
                 .disabled(controller.commandPending || (controller.isRemote && !controller.reachable))
+                #if os(watchOS)
+                .listRowBackground(Color.clear)
+                #endif
         }
     }
 

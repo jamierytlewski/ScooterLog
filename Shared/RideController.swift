@@ -221,7 +221,7 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         broadcast()
         flushOutbox()
         guard let session = companionSession, session.isReachable else { return }
-        session.sendMessage(["requestSnapshot": true], replyHandler: { reply in
+        session.sendMessage(["requestSnapshot": true], replyHandler: { @Sendable reply in
             let snapshot = reply["snapshot"] as? Data
             let places = reply["places"] as? Data
             let error = reply["error"] as? String
@@ -230,7 +230,7 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
                 if let places { self.receivePlaces(places) }
                 if let error { self.report("Could not refresh companion: \(error)") }
             }
-        }, errorHandler: { error in
+        }, errorHandler: { @Sendable error in
             let message = error.localizedDescription
             Task { @MainActor in self.report("Could not refresh companion: \(message)") }
         })
@@ -454,14 +454,14 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
             guard !Task.isCancelled, pendingRequestID == requestID else { return }
             finishRemoteCommand(requestID, error: "No acknowledgement received. Check the recording device; the ride may still be running.")
         }
-        session.sendMessage(["endRide": ride.id.uuidString], replyHandler: { reply in
+        session.sendMessage(["endRide": ride.id.uuidString], replyHandler: { @Sendable reply in
             let endedID = reply["ended"] as? String
             let message = reply["error"] as? String ?? (endedID == ride.id.uuidString ? nil : "The owner did not confirm ending this ride.")
             Task { @MainActor in
                 if message == nil && self.peer?.ride?.id == ride.id { self.peer?.ride = nil }
                 self.finishRemoteCommand(requestID, error: message)
             }
-        }, errorHandler: { error in
+        }, errorHandler: { @Sendable error in
             let message = error.localizedDescription
             Task { @MainActor in self.finishRemoteCommand(requestID, error: message) }
         })
@@ -494,7 +494,7 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
             let context = try companionContext()
             try session.updateApplicationContext(context)
             if session.isReachable {
-                session.sendMessage(context, replyHandler: nil, errorHandler: { error in
+                session.sendMessage(context, replyHandler: nil, errorHandler: { @Sendable error in
                     let message = error.localizedDescription
                     Task { @MainActor in
                         self.report("Live companion update delayed; queued context remains available: \(message)")

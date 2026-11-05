@@ -13,7 +13,7 @@
 <key>WKApplication</key><true/>
 <key>WKRunsIndependentlyOfCompanionApp</key><true/>
 <key>WKCompanionAppBundleIdentifier</key><string>com.jamierytlewski.scooterlog</string>
-<key>WKSupportsLiveActivityLaunchAttributeTypes</key><array/>
+<key>WKSupportsLiveActivityLaunchAttributeTypes</key><array><string>RideActivityAttributes</string></array>
 <key>NSLocationWhenInUseUsageDescription</key><string>ScooterLog uses your current location to plan directions and records your route and timing only when you start a ride on your watch.</string>
 <key>NSHealthShareUsageDescription</key><string>Optionally display heart rate, including during an explicitly started Other workout session. Samples may also be created by watchOS.</string>
 <key>NSHealthUpdateUsageDescription</key><string>Live heart rate optionally uses an Other workout session. ScooterLog discards its builder without saving a workout; watchOS may still create Health samples or ring effects.</string>

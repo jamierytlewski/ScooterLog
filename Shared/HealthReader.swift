@@ -47,7 +47,7 @@ final class HealthReader: NSObject, ObservableObject {
         if let query { store.stop(query) }
         let predicate = HKQuery.predicateForSamples(withStart: Date.now.addingTimeInterval(-3600), end: .now)
         let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: 1,
-                                  sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]) { _, samples, error in
+                                  sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]) { @Sendable _, samples, error in
             let message = error?.localizedDescription
             let sample = samples?.first as? HKQuantitySample
             let bpm = sample?.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
