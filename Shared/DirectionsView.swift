@@ -13,6 +13,176 @@ enum RouteMode: String, CaseIterable, Identifiable {
     var transportType: MKDirectionsTransportType { self == .walking ? .walking : .cycling }
 }
 
+@MainActor
+final class ScooterProfileStore: ObservableObject {
+    static let shared = ScooterProfileStore()
+    private let profilesKey = "scooterProfiles"
+    private let selectedKey = "selectedScooterProfile"
+    @Published private(set) var profiles: [ScooterProfile] = []
+    @Published private(set) var selectedID: UUID?
+    @Published var error: String?
+
+    var selected: ScooterProfile? { profiles.first { $0.id == selectedID } }
+
+    private init() {
+        let defaults = UserDefaults.standard
+        if let data = defaults.data(forKey: profilesKey) {
+            do {
+                let decoded = try JSONDecoder().decode([ScooterProfile].self, from: data)
+                guard decoded.allSatisfy(\.isValid), Set(decoded.map(\.id)).count == decoded.count else {
+                    throw CocoaError(.fileReadCorruptFile)
+                }
+                profiles = decoded
+            } catch {
+                self.error = "Couldn't read scooter profiles. Existing profile data has not been overwritten."
+                return
+            }
+        } else {
+            profiles = [.f3]
+        }
+        selectedID = defaults.string(forKey: selectedKey).flatMap(UUID.init(uuidString:))
+        if selected == nil { selectedID = profiles.first?.id }
+    }
+
+    func select(_ id: UUID) {
+        guard profiles.contains(where: { $0.id == id }) else { return }
+        selectedID = id
+        UserDefaults.standard.set(id.uuidString, forKey: selectedKey)
+    }
+
+    func save(_ profile: ScooterProfile) throws {
+        guard error == nil, profile.isValid else { throw CocoaError(.fileWriteInvalidFileName) }
+        var updated = profiles
+        if let index = updated.firstIndex(where: { $0.id == profile.id }) { updated[index] = profile }
+        else { updated.append(profile) }
+        try persist(updated)
+        select(profile.id)
+    }
+
+    func delete(_ id: UUID) throws {
+        guard error == nil else { throw CocoaError(.fileWriteUnknown) }
+        let updated = profiles.filter { $0.id != id }
+        try persist(updated)
+        if selectedID == id {
+            selectedID = updated.first?.id
+            UserDefaults.standard.set(selectedID?.uuidString, forKey: selectedKey)
+        }
+    }
+
+    private func persist(_ updated: [ScooterProfile]) throws {
+        let data = try JSONEncoder().encode(updated)
+        UserDefaults.standard.set(data, forKey: profilesKey)
+        profiles = updated
+    }
+}
+
+struct ScooterProfilesView: View {
+    @ObservedObject var store: ScooterProfileStore
+    @State private var deleteID: UUID?
+
+    var body: some View {
+        List {
+            if let error = store.error {
+                Text(error).foregroundStyle(.red)
+            } else {
+                Section {
+                    ForEach(store.profiles) { profile in
+                        NavigationLink {
+                            ScooterProfileEditor(profile: profile, store: store)
+                        } label: {
+                            HStack {
+                                Text(profile.name)
+                                Spacer()
+                                if store.selectedID == profile.id { Image(systemName: "checkmark") }
+                            }
+                        }
+                        .swipeActions {
+                            Button("Delete", role: .destructive) { deleteID = profile.id }
+                        }
+                    }
+                    NavigationLink {
+                        ScooterProfileEditor(profile: ScooterProfile(name: "", maximumSpeedMPH: 20,
+                            batteryWattHours: 477, maximumRangeMiles: 43.5, fullSpeedRangeMiles: 25), store: store)
+                    } label: {
+                        Label("Add scooter", systemImage: "plus")
+                    }
+                } footer: {
+                    Text("Use manufacturer ratings. These estimates do not read your scooter's battery. Profiles stay on this device.")
+                }
+            }
+        }
+        .rideSurface()
+        .navigationTitle("Scooters")
+        .confirmationDialog("Delete this scooter?", isPresented: Binding(
+            get: { deleteID != nil }, set: { if !$0 { deleteID = nil } }
+        ), titleVisibility: .visible) {
+            Button("Delete scooter", role: .destructive) {
+                guard let id = deleteID else { return }
+                do { try store.delete(id) }
+                catch { store.error = "Couldn't save the scooter change: \(error.localizedDescription)" }
+                deleteID = nil
+            }
+            Button("Cancel", role: .cancel) { deleteID = nil }
+        }
+    }
+}
+
+private struct ScooterProfileEditor: View {
+    @State private var profile: ScooterProfile
+    @ObservedObject var store: ScooterProfileStore
+    @AppStorage(RideUnitSystem.preferenceKey, store: RideWidgetStore.defaults)
+    private var units: RideUnitSystem = .imperial
+    @Environment(\.dismiss) private var dismiss
+
+    init(profile: ScooterProfile, store: ScooterProfileStore) {
+        _profile = State(initialValue: profile)
+        self.store = store
+    }
+
+    private func converted(_ value: Binding<Double>) -> Binding<Double> {
+        let factor = RideUnits.metersPerMile / units.metersPerUnit
+        return Binding(get: { value.wrappedValue * factor }, set: { value.wrappedValue = $0 / factor })
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                TextField("Scooter name", text: $profile.name)
+                numberField("Maximum speed (\(units.speedSymbol))", value: converted($profile.maximumSpeedMPH))
+                numberField("Battery capacity (Wh)", value: $profile.batteryWattHours)
+                numberField("Maximum rated range (\(units.distanceSymbol))", value: converted($profile.maximumRangeMiles))
+                numberField("Full-speed rated range (\(units.distanceSymbol))", value: converted($profile.fullSpeedRangeMiles))
+            } footer: {
+                Text("Enter positive, finite values. Full-speed range must not exceed maximum range.")
+            }
+        }
+        .rideSurface()
+        .navigationTitle("Scooter profile")
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    do { try store.save(profile); dismiss() }
+                    catch { store.error = "Couldn't save the scooter profile: \(error.localizedDescription)" }
+                }
+                .disabled(!profile.isValid)
+            }
+        }
+    }
+
+    private func numberField(_ label: String, value: Binding<Double>) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label).font(.subheadline).foregroundStyle(RideTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+            TextField(label, value: value, format: .number.precision(.fractionLength(0...2)))
+                .accessibilityLabel(label)
+                #if os(iOS)
+                .keyboardType(.decimalPad)
+                #endif
+        }
+        .padding(.vertical, 3)
+    }
+}
+
 struct RouteOption: Identifiable {
     let id = UUID()
     let name: String
@@ -599,7 +769,12 @@ final class DirectionsModel: ObservableObject {
         }
 
         private func spokenDistance(_ meters: Double) -> String {
-            if meters < 160 { return "\(max(10, Int(meters / 10) * 10)) meters" }
+            if meters < 160 {
+                if RideUnitSystem.selected == .metric {
+                    return "\(max(10, Int(meters / 10) * 10)) meters"
+                }
+                return "\(max(10, Int(meters * 3.28084 / 10) * 10)) feet"
+            }
             return RideUnits.distance(meters)
         }
 
@@ -611,6 +786,7 @@ final class DirectionsModel: ObservableObject {
 struct DirectionsView: View {
     @ObservedObject var controller: RideController
     @ObservedObject private var model: DirectionsModel
+    @ObservedObject private var scooters = ScooterProfileStore.shared
     @State private var showingGuidance = false
     // Directions is a tab root, so it reappears whenever guidance is popped; only reopen guidance it hasn't shown yet.
     @State private var guidanceDismissed = false
@@ -618,6 +794,8 @@ struct DirectionsView: View {
     @State private var mode = RouteMode.cycling
     @AppStorage("f3PlanningSpeedMPH") private var planningSpeed = 20.0
     @AppStorage("directionsVoiceGuidance") private var voiceGuidance = true
+    @AppStorage(RideUnitSystem.preferenceKey, store: RideWidgetStore.defaults)
+    private var units: RideUnitSystem = .imperial
     @State private var camera = MapCameraPosition.automatic
 
     init(controller: RideController) {
@@ -847,30 +1025,43 @@ struct DirectionsView: View {
 
     @ViewBuilder private func scooterEstimate(for route: RouteOption) -> some View {
         Section {
-            Text("Segway F3 · Max speed 20 mph · Battery 477 Wh")
-                .font(.subheadline).fixedSize(horizontal: false, vertical: true)
-            Stepper(value: $planningSpeed, in: 5...ScooterEstimate.maximumSpeedMPH, step: 1) {
-                Text("Planning speed: \(planningSpeed, specifier: "%.0f") mph")
-            }
-            .accessibilityIdentifier("planningSpeed")
-            if let estimate = ScooterEstimate(distanceMeters: route.distance, speedMPH: planningSpeed) {
-                Text("At \(planningSpeed, specifier: "%.0f") mph, without stops: \(duration(estimate.noStopDuration))")
-                    .accessibilityIdentifier("scooterDuration")
-                Text("Rated energy estimate: \(estimate.energyWattHours.lowerBound, specifier: "%.1f")–\(estimate.energyWattHours.upperBound, specifier: "%.1f") Wh")
-                    .accessibilityIdentifier("scooterEnergy")
-                Text("\(estimate.batteryPercent.lowerBound, specifier: "%.1f")–\(estimate.batteryPercent.upperBound, specifier: "%.1f")% of a full new battery")
-                if estimate.batteryPercent.upperBound > 100 {
-                    Label("This route exceeds the F3's 25-mile full-speed rated range.", systemImage: "exclamationmark.triangle")
-                        .fixedSize(horizontal: false, vertical: true)
+            NavigationLink("Manage scooters") { ScooterProfilesView(store: scooters) }
+            if let profile = scooters.selected {
+                Picker("Scooter", selection: Binding(
+                    get: { profile.id },
+                    set: { scooters.select($0); planningSpeed = min(planningSpeed, scooters.selected?.maximumSpeedMPH ?? planningSpeed) }
+                )) {
+                    ForEach(scooters.profiles) { Text($0.name).tag($0.id) }
                 }
+                Text("\(profile.name) · Max \(RideUnits.speed(profile.maximumSpeedMPH * RideUnits.metersPerMile / 3600, units: units)) · Battery \(profile.batteryWattHours, specifier: "%.0f") Wh")
+                    .font(.subheadline).fixedSize(horizontal: false, vertical: true)
+                Stepper(value: $planningSpeed, in: 1...profile.maximumSpeedMPH, step: 1) {
+                    Text("Planning speed: \(RideUnits.speed(planningSpeed * RideUnits.metersPerMile / 3600, units: units))")
+                }
+                .accessibilityIdentifier("planningSpeed")
+                if let estimate = ScooterEstimate(distanceMeters: route.distance, speedMPH: planningSpeed, profile: profile) {
+                    Text("Without stops: \(duration(estimate.noStopDuration))")
+                        .accessibilityIdentifier("scooterDuration")
+                    Text("Rated energy estimate: \(estimate.energyWattHours.lowerBound, specifier: "%.1f")–\(estimate.energyWattHours.upperBound, specifier: "%.1f") Wh")
+                        .accessibilityIdentifier("scooterEnergy")
+                    Text("\(estimate.batteryPercent.lowerBound, specifier: "%.1f")–\(estimate.batteryPercent.upperBound, specifier: "%.1f")% of a full new battery")
+                    if estimate.batteryPercent.upperBound > 100 {
+                        Label("This route exceeds the scooter's full-speed rated range.", systemImage: "exclamationmark.triangle")
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else {
+                    Text("Planning speed is invalid for this scooter.")
+                    Button("Reset planning speed") { planningSpeed = profile.maximumSpeedMPH }
+                }
+            } else if let error = scooters.error {
+                Text(error).foregroundStyle(.red)
             } else {
-                Text("Planning speed is invalid. Reset it to estimate this route.")
-                Button("Reset planning speed") { planningSpeed = ScooterEstimate.maximumSpeedMPH }
+                Text("Add a scooter to see an estimate.")
             }
         } header: {
             Text("Scooter estimate").foregroundStyle(RideTheme.secondaryText)
         } footer: {
-            Text("Time assumes riding this entire route at the selected speed; stops and slower sections add time. Energy uses F3 ratings of 43.5 mi at 9 mph and 25 mi at 20 mph, not live battery data or a speed-specific prediction. Hills, load, wind, temperature, tires and riding habits can put actual use outside this band. Walking and cycling routes are not verified for scooters.")
+            Text("Time assumes riding this entire route at the selected speed; stops and slower sections add time. Energy uses the two ranges entered for this scooter, not live battery data or a speed-specific prediction. Hills, load, wind, temperature, tires and riding habits can put actual use outside this band. Walking and cycling routes are not verified for scooters.")
                 .foregroundStyle(RideTheme.secondaryText)
         }
     }

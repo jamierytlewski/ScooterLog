@@ -90,4 +90,100 @@ struct RideExportTests {
         #expect(try Data(contentsOf: urls[0]).count > 0)
         #expect(try XMLDocument(contentsOf: urls[1]).rootElement()?.name == "gpx")
     }
+
+    @Test func privateRouteNeverIncludesEndpointsOrRideMetadata() throws {
+        var ride = Ride(owner: "Private owner", startedAt: start)
+        for index in 0..<50 {
+            let time = start.addingTimeInterval(Double(index * 4))
+            let sample = LocationSample(latitude: Double(index) * 0.0003, longitude: 0,
+                                        timestamp: time, accuracy: 5, speed: 9)
+            let accepted = ride.append(sample, receivedAt: time)
+            #expect(accepted)
+        }
+        ride.end(at: start.addingTimeInterval(200))
+        let xml = try RideExport.privateRouteGPX(ride)
+        let document = try XMLDocument(xmlString: xml)
+        let points = try document.nodes(forXPath: "//*[local-name()='trkpt']")
+        #expect(!points.isEmpty)
+        for case let point as XMLElement in points {
+            let latText = try #require(point.attribute(forName: "lat")?.stringValue)
+            let lonText = try #require(point.attribute(forName: "lon")?.stringValue)
+            let latitude = try #require(Double(latText))
+            let longitude = try #require(Double(lonText))
+            let sample = LocationSample(latitude: latitude, longitude: longitude, timestamp: start, accuracy: 5, speed: 0)
+            #expect(sample.distance(to: ride.samples[0]) > 200)
+            #expect(sample.distance(to: try #require(ride.samples.last)) > 200)
+        }
+        #expect(!xml.contains("Private owner"))
+        #expect(!xml.contains(ride.id.uuidString))
+        #expect(!xml.contains("<time>"))
+        #expect(!xml.contains("<extensions>"))
+    }
+
+    @Test func privateRouteRejectsShortOrInvalidShares() {
+        #expect(throws: RideExport.PrivateRouteError.insufficientRoute) {
+            try RideExport.privateRouteGPX(ride())
+        }
+        #expect(throws: RideExport.PrivateRouteError.invalidPrivacyRadius) {
+            try RideExport.privateRouteGPX(ride(), privacyRadius: .nan)
+        }
+    }
+
+    @Test func privateRouteDoesNotConnectAcrossAnEndpointRevisit() throws {
+        var ride = Ride(owner: "Phone", startedAt: start)
+        let positions = Array(0...30) + Array((2...29).reversed()) + Array(3...60)
+        for (index, position) in positions.enumerated() {
+            let time = start.addingTimeInterval(Double(index * 4))
+            let sample = LocationSample(latitude: Double(position) * 0.0003, longitude: 0,
+                                        timestamp: time, accuracy: 5, speed: 9)
+            let accepted = ride.append(sample, receivedAt: time)
+            #expect(accepted)
+        }
+        ride.end(at: start.addingTimeInterval(Double(positions.count * 4)))
+        let xml = try RideExport.privateRouteGPX(ride)
+        let document = try XMLDocument(xmlString: xml)
+        let segments = try document.nodes(forXPath: "//*[local-name()='trkseg']")
+        #expect(segments.count >= 2)
+        for segment in segments {
+            for case let point as XMLElement in try segment.nodes(forXPath: "./*[local-name()='trkpt']") {
+                let latText = try #require(point.attribute(forName: "lat")?.stringValue)
+                let latitude = try #require(Double(latText))
+                let sample = LocationSample(latitude: latitude, longitude: 0, timestamp: start, accuracy: 5, speed: 0)
+                #expect(sample.distance(to: ride.samples[0]) > 200)
+                #expect(sample.distance(to: try #require(ride.samples.last)) > 200)
+            }
+        }
+    }
+
+    @Test func unitsFormatCanonicalValues() {
+        #expect(RideUnits.distance(1_609.344, units: .imperial) == "1.00 mi")
+        #expect(RideUnits.distance(1_000, units: .metric) == "1.00 km")
+        #expect(RideUnits.speed(10, units: .metric) == "36.0 km/h")
+        #expect(RideUnits.speed(nil, units: .metric) == "-- km/h")
+    }
+
+    @Test func trimmedCopyPreservesOriginalAndGpsGaps() throws {
+        let original = ride()
+        let copy = try original.trimmedCopy(from: 1, through: 6)
+        #expect(copy.id != original.id)
+        #expect(copy.owner == original.owner)
+        #expect(copy.samples == Array(original.samples[1...6]))
+        #expect(copy.startedAt == original.samples[1].timestamp)
+        #expect(copy.endedAt == original.samples[6].timestamp)
+        #expect(copy.isTrimmedEstimate == true)
+        #expect(copy.routeSegments.map(\.count) == [4, 2])
+        #expect(copy.movingDuration == 0)
+        #expect(copy.stoppedDuration == 0)
+        #expect(copy.unknownDuration(at: .now) == copy.elapsed(at: .now))
+        #expect(original.samples.count == 7)
+        #expect(original.isTrimmedEstimate == nil)
+        let decoded = try JSONDecoder().decode(Ride.self, from: JSONEncoder().encode(copy))
+        #expect(decoded == copy)
+        var oldData = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
+        oldData.removeValue(forKey: "isTrimmedEstimate")
+        let legacy = try JSONDecoder().decode(Ride.self, from: JSONSerialization.data(withJSONObject: oldData))
+        #expect(legacy == original)
+        #expect(throws: Ride.TrimError.invalidRange) { try original.trimmedCopy(from: 2, through: 2) }
+        #expect(throws: Ride.TrimError.invalidRange) { try original.trimmedCopy(from: -1, through: 3) }
+    }
 }

@@ -109,7 +109,7 @@ public enum RideWeatherReason: Sendable, Hashable {
         case let .expected(kind, date, chance):
             "\(kind.noun) \(Int((chance * 100).rounded()))% around \(date.formatted(date: .omitted, time: .shortened))"
         case let .gusty(speed):
-            "Gusts to \(Int((speed * 3600 / RideUnits.metersPerMile).rounded())) mph"
+            "Gusts to \(RideUnits.speed(speed))"
         }
     }
 }

@@ -50,6 +50,8 @@ struct RideDashboard: View {
     @State private var rideBarVisibility = RideBarVisibility()
     #endif
     @AppStorage(RideTheme.preferenceKey) private var theme: RideTheme = .tronBlue
+    @AppStorage(RideUnitSystem.preferenceKey, store: RideWidgetStore.defaults)
+    private var units: RideUnitSystem = .imperial
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -134,6 +136,8 @@ struct RideDashboard: View {
                 locationSection
                 healthSection
                 appearanceSection
+                unitsSection
+                scootersSection
                 widgetsSection
                 privacyAndSupportSection
                 #endif
@@ -165,6 +169,8 @@ struct RideDashboard: View {
                 NavigationStack {
                     List {
                         appearanceSection
+                        unitsSection
+                        scootersSection
                         widgetsSection
                         locationSection
                         healthSection
@@ -196,6 +202,11 @@ struct RideDashboard: View {
             }
             .onChange(of: weeklyGoal, initial: false) { _, _ in publishWidgets() }
             .onChange(of: weather.widgetWeather, initial: false) { _, _ in publishWidgets() }
+            .onChange(of: units, initial: false) { _, _ in
+                controller.refreshLiveActivityAppearance()
+                widgets.invalidate()
+                publishWidgets()
+            }
             .onReceive(controller.$archive) { publishWidgets($0) }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
@@ -378,10 +389,38 @@ struct RideDashboard: View {
         }
     }
 
+    private var unitsSection: some View {
+        Section {
+            Picker("Distance and speed", selection: $units) {
+                Text("Miles and mph").tag(RideUnitSystem.imperial)
+                Text("Kilometers and km/h").tag(RideUnitSystem.metric)
+            }
+            .accessibilityIdentifier("rideUnits")
+        } header: {
+            Text("Units").foregroundStyle(RideTheme.secondaryText)
+        } footer: {
+            Text("This device's app, widgets and Live Activity use these units.")
+                .foregroundStyle(RideTheme.secondaryText)
+        }
+    }
+
+    private var scootersSection: some View {
+        Section {
+            NavigationLink {
+                ScooterProfilesView(store: .shared)
+            } label: {
+                Label("Scooter profiles", systemImage: "scooter")
+            }
+        }
+    }
+
     private var widgetsSection: some View {
         Section {
-            Stepper(value: $weeklyGoal, in: RideWidgetSnapshot.goalRange, step: 5) {
-                LabeledContent("Weekly goal", value: "\(Int(weeklyGoal)) mi")
+            Stepper(value: Binding(
+                get: { weeklyGoal * RideUnits.metersPerMile / units.metersPerUnit },
+                set: { weeklyGoal = $0 * units.metersPerUnit / RideUnits.metersPerMile }
+            ), in: (RideWidgetSnapshot.goalRange.lowerBound * RideUnits.metersPerMile / units.metersPerUnit)...(RideWidgetSnapshot.goalRange.upperBound * RideUnits.metersPerMile / units.metersPerUnit), step: 5) {
+                LabeledContent("Weekly goal", value: RideUnits.distance(weeklyGoal * RideUnits.metersPerMile, units: units))
             }
             .accessibilityIdentifier("weeklyGoal")
         } header: {
@@ -1026,6 +1065,9 @@ private struct RideRow: View {
                     .font(.subheadline).foregroundStyle(RideTheme.secondaryText)
                 Text(RideFormat.duration(ride.elapsed(at: .now)))
                     .font(.caption).monospacedDigit().foregroundStyle(RideTheme.secondaryText)
+                if ride.isTrimmedEstimate == true {
+                    Text("GPS estimate").font(.caption).foregroundStyle(RideTheme.secondaryText)
+                }
             }
         }
         .padding(.vertical, 6)
@@ -1040,6 +1082,10 @@ struct RideDetail: View {
     @State private var confirmDeletion = false
     @State private var showSpeedMap = true
     @State private var visibleMapCamera: MapCamera?
+    #if os(iOS)
+    @State private var shareFiles: ActivityExportFiles?
+    @State private var shareDirectory: URL?
+    #endif
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -1094,19 +1140,57 @@ struct RideDetail: View {
                     .font(.system(.largeTitle, design: .rounded, weight: .bold))
                     .monospacedDigit()
                     .foregroundStyle(.tint)
-                    .accessibilityLabel("Distance")
+                    .accessibilityLabel(ride.isTrimmedEstimate == true ? "Estimated distance" : "Distance")
                     .accessibilityValue(RideFormat.distance(ride.distance))
                 RideMetric("Recording owner", value: ride.owner)
                 RideMetric("Elapsed", seconds: ride.elapsed(at: .now))
-                RideMetric("Moving", seconds: ride.movingDuration)
-                RideMetric("Stopped estimate", seconds: ride.stoppedDuration)
+                if ride.isTrimmedEstimate == true {
+                    RideMetric("Moving and stopped time", value: "Unavailable")
+                } else {
+                    RideMetric("Moving", seconds: ride.movingDuration)
+                    RideMetric("Stopped estimate", seconds: ride.stoppedDuration)
+                }
                 RideMetric("Unknown", seconds: ride.unknownDuration(at: .now))
-                RideMetric("Overall average", value: RideFormat.speed(ride.averageSpeed(at: .now)))
-                RideMetric("Moving average", value: RideFormat.speed(ride.movingAverageSpeed))
+                RideMetric(ride.isTrimmedEstimate == true ? "Estimated overall average" : "Overall average",
+                           value: RideFormat.speed(ride.averageSpeed(at: .now)))
+                if ride.isTrimmedEstimate != true {
+                    RideMetric("Moving average", value: RideFormat.speed(ride.movingAverageSpeed))
+                }
+                if ride.isTrimmedEstimate == true {
+                    Text("Trimmed copy: distance is estimated from GPS. Moving and stopped time are unknown because pause and stationary events were not retained.")
+                        .font(.footnote).foregroundStyle(RideTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             } header: {
                 Text("Ride summary").foregroundStyle(RideTheme.secondaryText)
             }
             .ridePanelRow()
+            #if os(iOS)
+            Section {
+                NavigationLink {
+                    RideTrimView(ride: ride, controller: controller)
+                } label: {
+                    Label("Trim ride", systemImage: "scissors")
+                }
+                .disabled(ride.samples.count < 3)
+                ShareLink(item: shareSummary) {
+                    Label("Share ride stats", systemImage: "square.and.arrow.up")
+                }
+                .accessibilityIdentifier("shareRideStats")
+                Button {
+                    sharePrivateRoute()
+                } label: {
+                    Label("Share route without endpoints", systemImage: "map")
+                }
+                .accessibilityIdentifier("sharePrivateRoute")
+                Text("Stats contain no route or date. Route sharing removes points within 200 meters of the start and end, and omits times. Remaining roads can still reveal where you rode.")
+                    .font(.footnote).foregroundStyle(RideTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            } header: {
+                Text("Share").foregroundStyle(RideTheme.secondaryText)
+            }
+            .ridePanelRow()
+            #endif
             #if !os(iOS)
             Section {
                 Button("Delete ride", role: .destructive) { confirmDeletion = true }
@@ -1125,6 +1209,12 @@ struct RideDetail: View {
                     .accessibilityIdentifier("deleteRide")
             }
         }
+        .sheet(item: $shareFiles, onDismiss: removeSharedRoute) { files in
+            ActivityExportShareSheet(urls: files.urls) { error in
+                if let error { controller.report("Could not share route: \(error.localizedDescription)") }
+                shareFiles = nil
+            }
+        }
         #endif
         // Leave the screen once the ride is gone, whether deleted here or from the companion.
         .onChange(of: controller.archive.isDeleted(ride.id)) { _, deleted in
@@ -1137,6 +1227,42 @@ struct RideDetail: View {
         catch { controller.report(error.localizedDescription) }
     }
 
+    #if os(iOS)
+    private var shareSummary: String {
+        let distance = ride.isTrimmedEstimate == true ? "Estimated distance" : "Distance"
+        var summary = "ScooterLog ride\n\(distance): \(RideFormat.distance(ride.distance))\nElapsed: \(RideFormat.duration(ride.elapsed(at: .now)))"
+        if ride.isTrimmedEstimate != true {
+            summary += "\nMoving: \(RideFormat.duration(ride.movingDuration))\nMoving average: \(RideFormat.speed(ride.movingAverageSpeed))"
+        }
+        return summary
+    }
+
+    private func sharePrivateRoute() {
+        do {
+            let route = try RideExport.privateRouteGPX(ride)
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("ScooterLog-share-\(UUID().uuidString)", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            shareDirectory = directory
+            let url = directory.appendingPathComponent("ScooterLog-shared-route.gpx")
+            try route.write(to: url, atomically: true, encoding: .utf8)
+            shareFiles = ActivityExportFiles(urls: [url])
+        } catch RideExport.PrivateRouteError.insufficientRoute {
+            controller.report("This route is too short to share after removing its endpoints.")
+        } catch {
+            controller.report("Could not prepare route sharing: \(error.localizedDescription)")
+            removeSharedRoute()
+        }
+    }
+
+    private func removeSharedRoute() {
+        guard let directory = shareDirectory else { return }
+        shareDirectory = nil
+        do { try FileManager.default.removeItem(at: directory) }
+        catch { controller.report("Could not remove temporary shared route: \(error.localizedDescription)") }
+    }
+    #endif
+
     private var segments: [[LocationSample]] {
         ride.routeSegments.filter { $0.count > 1 }
     }
@@ -1145,6 +1271,119 @@ struct RideDetail: View {
         samples.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
     }
 }
+
+#if os(iOS)
+private struct RideTrimView: View {
+    let ride: Ride
+    @ObservedObject var controller: RideController
+    @State private var first = 0.0
+    @State private var last: Double
+    @State private var preview: Ride?
+    @State private var showConfirmation = false
+    @State private var error: String?
+    @Environment(\.dismiss) private var dismiss
+
+    init(ride: Ride, controller: RideController) {
+        self.ride = ride
+        self.controller = controller
+        _last = State(initialValue: Double(ride.samples.count - 1))
+    }
+
+    private var startIndex: Int { Int(first) }
+    private var endIndex: Int { Int(last) }
+    private var changed: Bool { startIndex > 0 || endIndex < ride.samples.count - 1 }
+
+    var body: some View {
+        Form {
+            Section {
+                Text("Choose the part of your ride to keep.")
+                Stepper(value: Binding(get: { startIndex }, set: {
+                    first = Double($0)
+                    preview = nil
+                }), in: 0...(endIndex - 1)) {
+                    VStack(alignment: .leading) {
+                        Text("Start")
+                        Text(ride.samples[startIndex].timestamp, format: .dateTime.month().day().hour().minute().second())
+                            .font(.subheadline).foregroundStyle(RideTheme.secondaryText)
+                    }
+                }
+                Slider(value: Binding(get: { first }, set: {
+                    first = min($0, last - 1)
+                    preview = nil
+                }), in: 0...Double(ride.samples.count - 2), step: 1)
+                .accessibilityLabel("Trim start")
+                .accessibilityValue(ride.samples[startIndex].timestamp.formatted(date: .abbreviated, time: .standard))
+                Stepper(value: Binding(get: { endIndex }, set: {
+                    last = Double($0)
+                    preview = nil
+                }), in: (startIndex + 1)...(ride.samples.count - 1)) {
+                    VStack(alignment: .leading) {
+                        Text("End")
+                        Text(ride.samples[endIndex].timestamp, format: .dateTime.month().day().hour().minute().second())
+                            .font(.subheadline).foregroundStyle(RideTheme.secondaryText)
+                    }
+                }
+                Slider(value: Binding(get: { last }, set: {
+                    last = max($0, first + 1)
+                    preview = nil
+                }), in: 1...Double(ride.samples.count - 1), step: 1)
+                .accessibilityLabel("Trim end")
+                .accessibilityValue(ride.samples[endIndex].timestamp.formatted(date: .abbreviated, time: .standard))
+                Button("Preview trimmed ride") {
+                    do { preview = try ride.trimmedCopy(from: startIndex, through: endIndex); error = nil }
+                    catch { self.error = "Couldn't trim this ride: \(error.localizedDescription)" }
+                }
+                .disabled(!changed)
+                if let error { Text(error).foregroundStyle(.red) }
+            }
+            if let preview {
+                Section {
+                    if preview.routeSegments.contains(where: { $0.count > 1 }) {
+                        Map {
+                            ForEach(Array(preview.routeSegments.enumerated()), id: \.offset) { _, samples in
+                                if samples.count > 1 {
+                                    MapPolyline(coordinates: samples.map {
+                                        CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
+                                    }).stroke(.tint, lineWidth: 4)
+                                }
+                            }
+                        }
+                        .frame(height: 200)
+                        .clipShape(.rect(cornerRadius: 16))
+                        .accessibilityLabel("Trimmed route preview")
+                    }
+                    RideMetric("Estimated distance", value: RideFormat.distance(preview.distance))
+                    RideMetric("Elapsed", seconds: preview.elapsed(at: .now))
+                    RideMetric("Moving and stopped time", value: "Unavailable")
+                    Button("Save trimmed copy") { showConfirmation = true }
+                        .confirmationDialog("Save a trimmed copy?", isPresented: $showConfirmation,
+                                            titleVisibility: .visible) {
+                            Button("Save copy") { save(preview) }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("The original remains in History and both rides count in totals until you delete one. GPS-derived distance is an estimate; moving and stopped time are unknown because earlier pause and stationary events were not saved.")
+                        }
+                } header: {
+                    Text("Preview").foregroundStyle(RideTheme.secondaryText)
+                } footer: {
+                    Text("Distance is a GPS estimate. Moving and stopped time are unknown because pause and stationary events were not retained.")
+                }
+            }
+        }
+        .rideSurface()
+        .navigationTitle("Trim ride")
+    }
+
+    private func save(_ copy: Ride) {
+        do {
+            try controller.saveTrimmedCopy(copy, of: ride.id)
+            dismiss()
+        } catch {
+            self.error = "Couldn't save the trimmed copy: \(error.localizedDescription)"
+        }
+    }
+}
+#endif
 
 private extension RideSpeedBand {
     var color: Color {
@@ -1158,12 +1397,18 @@ private extension RideSpeedBand {
     }
 
     var label: String {
+        let unit = RideUnitSystem.selected
+        let factor = RideUnits.metersPerMile / unit.metersPerUnit
+        let format = unit == .metric ? "%.1f" : "%.0f"
+        let five = String(format: format, 5 * factor)
+        let ten = String(format: format, 10 * factor)
+        let fifteen = String(format: format, 15 * factor)
         switch self {
-        case .slow: "Blue: under 5 mph"
-        case .cruising: "Green: 5 to under 10 mph"
-        case .brisk: "Orange: 10 to under 15 mph"
-        case .fast: "Red: 15 mph or more"
-        case .unknown: "Gray: speed unavailable"
+        case .slow: return "Blue: under \(five) \(unit.speedSymbol)"
+        case .cruising: return "Green: \(five) to under \(ten) \(unit.speedSymbol)"
+        case .brisk: return "Orange: \(ten) to under \(fifteen) \(unit.speedSymbol)"
+        case .fast: return "Red: \(fifteen) \(unit.speedSymbol) or more"
+        case .unknown: return "Gray: speed unavailable"
         }
     }
 }

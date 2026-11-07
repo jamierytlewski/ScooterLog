@@ -36,6 +36,8 @@ public struct Ride: Codable, Equatable, Identifiable, Sendable {
     public private(set) var stoppedDuration: TimeInterval = 0
     public private(set) var isMoving = false
     public private(set) var stationarySince: Date?
+    /// Older recordings do not retain all pause and motion events needed to reproduce aggregates.
+    public private(set) var isTrimmedEstimate: Bool?
     private var accountingBoundary: Date?
     private var pendingStopDuration: TimeInterval = 0
     private var pendingStopDistance: Double = 0
@@ -95,6 +97,30 @@ public struct Ride: Codable, Equatable, Identifiable, Sendable {
     public func preview() -> Ride {
         var copy = self
         copy.samples = Array(samples.suffix(1))
+        return copy
+    }
+
+    public enum TrimError: Error, Equatable {
+        case invalidRange, invalidSample
+    }
+
+    /// Builds a separate ride, leaving the original immutable for safe companion and cloud sync.
+    public func trimmedCopy(from start: Int, through end: Int) throws -> Ride {
+        guard endedAt != nil, start >= 0, end < samples.count, start < end else {
+            throw TrimError.invalidRange
+        }
+        let kept = samples[start...end]
+        var copy = Ride(owner: owner, startedAt: samples[start].timestamp)
+        for sample in kept {
+            guard copy.append(sample, receivedAt: sample.timestamp) else { throw TrimError.invalidSample }
+        }
+        copy.end(at: samples[end].timestamp)
+        // Historical motion and interruption boundaries are not present in the saved samples.
+        // Keep all time unknown rather than presenting replayed classifications as fact.
+        copy.movingDuration = 0
+        copy.stoppedDuration = 0
+        copy.isMoving = false
+        copy.isTrimmedEstimate = true
         return copy
     }
 

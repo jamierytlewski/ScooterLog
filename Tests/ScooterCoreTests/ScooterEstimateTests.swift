@@ -34,4 +34,19 @@ struct ScooterEstimateTests {
         }
         #expect(ScooterEstimate(distanceMeters: .greatestFiniteMagnitude, speedMPH: .leastNonzeroMagnitude) == nil)
     }
+
+    @Test func customProfilesUseTheirOwnBenchmarks() throws {
+        var profile = ScooterProfile(name: "My scooter", maximumSpeedMPH: 30, batteryWattHours: 600,
+                                     maximumRangeMiles: 40, fullSpeedRangeMiles: 20)
+        let estimate = try #require(ScooterEstimate(distanceMeters: 20 * RideUnits.metersPerMile,
+                                                    speedMPH: 25, profile: profile))
+        #expect(estimate.batteryPercent == 50...100)
+        #expect(estimate.energyWattHours == 300...600)
+        #expect(ScooterEstimate(distanceMeters: 100, speedMPH: 31, profile: profile) == nil)
+        profile.fullSpeedRangeMiles = 41
+        #expect(!profile.isValid)
+        #expect(ScooterEstimate(distanceMeters: 100, speedMPH: 20, profile: profile) == nil)
+        profile.fullSpeedRangeMiles = .nan
+        #expect(!profile.isValid)
+    }
 }

@@ -27,6 +27,8 @@ enum RideWidgetStore {
 final class RideWidgetPublisher: ObservableObject {
     private var published: RideWidgetSnapshot?
 
+    func invalidate() { published = nil }
+
     func publish(rides: [Ride], rideActive: Bool, goalMiles: Double, weather: RideWidgetSnapshot.Weather?, theme: String) {
         // Keep the last forecast if this launch hasn't fetched one yet.
         let weather = weather ?? published?.weather ?? RideWidgetStore.load()?.weather

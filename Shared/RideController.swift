@@ -270,6 +270,20 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         try persist(next)
     }
 
+    func saveTrimmedCopy(_ copy: Ride, of originalID: UUID) throws {
+        guard storageAvailable else { throw RideFailure.storage }
+        guard archive.completed.contains(where: { $0.id == originalID }),
+              copy.isTrimmedEstimate == true, copy.endedAt != nil, copy.id != originalID else {
+            throw CocoaError(.fileReadNoSuchFile)
+        }
+        let repository = RideRepository(directory: storeURL.deletingLastPathComponent())
+        try repository.saveCompleted(copy)
+        var next = archive
+        next.importCompleted(copy)
+        archive = next
+        queueCompleted(copy)
+    }
+
     /// Permanently deletes completed rides here and, unless the request came from the companion,
     /// tells the paired device. Nothing changes if the deletion cannot be saved.
     func deleteRides(_ ids: Set<UUID>, propagate: Bool = true) throws {

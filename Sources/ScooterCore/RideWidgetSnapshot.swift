@@ -16,13 +16,16 @@ public struct RideWidgetSnapshot: Codable, Equatable, Sendable {
         public var movingDuration: TimeInterval
         /// Moving average speed in meters per second.
         public var averageSpeed: Double
+        public var isTrimmedEstimate: Bool?
 
-        public init(startedAt: Date, endedAt: Date, distance: Double, movingDuration: TimeInterval, averageSpeed: Double) {
+        public init(startedAt: Date, endedAt: Date, distance: Double, movingDuration: TimeInterval, averageSpeed: Double,
+                    isTrimmedEstimate: Bool? = nil) {
             self.startedAt = startedAt
             self.endedAt = endedAt
             self.distance = distance
             self.movingDuration = movingDuration
             self.averageSpeed = averageSpeed
+            self.isTrimmedEstimate = isTrimmedEstimate
         }
 
         public var duration: TimeInterval { endedAt.timeIntervalSince(startedAt) }
@@ -39,6 +42,7 @@ public struct RideWidgetSnapshot: Codable, Equatable, Sendable {
         public var verdict: RideWeatherVerdict
         public var summary: String
         public var temperature: Double?
+        public var gustMetersPerSecond: Double?
         public var updated: Date
         /// Rounded to about 1 km so the widget can refresh the forecast without its own location access.
         public var latitude: Double
@@ -49,6 +53,7 @@ public struct RideWidgetSnapshot: Codable, Equatable, Sendable {
             self.verdict = verdict
             self.summary = summary
             self.temperature = temperature
+            self.gustMetersPerSecond = nil
             self.updated = updated
             self.latitude = (latitude * 100).rounded() / 100
             self.longitude = (longitude * 100).rounded() / 100
@@ -57,6 +62,16 @@ public struct RideWidgetSnapshot: Codable, Equatable, Sendable {
         public init(_ assessment: RideWeatherAssessment, updated: Date, latitude: Double, longitude: Double) {
             self.init(verdict: assessment.verdict, summary: assessment.summary, temperature: assessment.temperature,
                       updated: updated, latitude: latitude, longitude: longitude)
+            if case let .gusty(speed) = assessment.reasons.first {
+                gustMetersPerSecond = speed
+            }
+        }
+
+        public var displaySummary: String {
+            if let gustMetersPerSecond { return "Gusts to \(RideUnits.speed(gustMetersPerSecond))" }
+            // Older snapshots stored only a formatted string, which cannot safely be converted.
+            if summary.hasPrefix("Gusts to ") { return "Strong wind gusts" }
+            return summary
         }
 
         public func isFresh(at date: Date) -> Bool { date.timeIntervalSince(updated) < 3 * 3600 }
@@ -125,7 +140,8 @@ public struct RideWidgetSnapshot: Codable, Equatable, Sendable {
             totalDistance: completed.reduce(0) { $0 + $1.distance },
             lastRide: last.map {
                 LastRide(startedAt: $0.startedAt, endedAt: $0.endedAt ?? $0.startedAt, distance: $0.distance,
-                         movingDuration: $0.movingDuration, averageSpeed: $0.movingAverageSpeed)
+                         movingDuration: $0.movingDuration, averageSpeed: $0.movingAverageSpeed,
+                         isTrimmedEstimate: $0.isTrimmedEstimate)
             },
             habits: habits(from: completed, now: now, calendar: calendar),
             weather: weather,

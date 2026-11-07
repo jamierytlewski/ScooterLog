@@ -51,6 +51,59 @@ extension Ride {
 }
 
 public enum RideExport {
+    public enum PrivateRouteError: Error, Equatable {
+        case invalidPrivacyRadius
+        case insufficientRoute
+    }
+
+    /// A route-only GPX with no timestamps, owner, ride identifier, or original endpoints.
+    /// Every retained point is outside the radius of both endpoints, including revisits.
+    public static func privateRouteGPX(_ ride: Ride, privacyRadius: Double = 200) throws -> String {
+        guard privacyRadius.isFinite, privacyRadius > 0 else { throw PrivateRouteError.invalidPrivacyRadius }
+        guard ride.endedAt != nil, let first = ride.samples.first, let last = ride.samples.last,
+              ride.samples.count >= 2 else { throw PrivateRouteError.insufficientRoute }
+        var segments: [[LocationSample]] = []
+        var current: [LocationSample] = []
+        func outside(_ sample: LocationSample) -> Bool {
+            sample.distance(to: first) > privacyRadius && sample.distance(to: last) > privacyRadius
+        }
+        for sample in ride.samples {
+            guard outside(sample) else {
+                if current.count > 1 { segments.append(current) }
+                current = []
+                continue
+            }
+            if let previous = current.last {
+                let gap = sample.timestamp.timeIntervalSince(previous.timestamp)
+                let length = previous.distance(to: sample)
+                // Triangle inequality keeps the entire connecting segment outside the privacy zones.
+                let clearance = min(previous.distance(to: first), previous.distance(to: last),
+                                    sample.distance(to: first), sample.distance(to: last))
+                if !(0...15).contains(gap) || clearance - length <= privacyRadius {
+                    if current.count > 1 { segments.append(current) }
+                    current = []
+                }
+            }
+            current.append(sample)
+        }
+        if current.count > 1 { segments.append(current) }
+        guard !segments.isEmpty else { throw PrivateRouteError.insufficientRoute }
+        var lines = [
+            #"<?xml version="1.0" encoding="UTF-8"?>"#,
+            #"<gpx version="1.1" creator="ScooterLog" xmlns="http://www.topografix.com/GPX/1/1">"#,
+            "<trk><name>Shared ride</name>"
+        ]
+        for segment in segments {
+            lines.append("<trkseg>")
+            for sample in segment {
+                lines.append("<trkpt lat=\"\(sample.latitude)\" lon=\"\(sample.longitude)\"/>")
+            }
+            lines.append("</trkseg>")
+        }
+        lines.append("</trk></gpx>")
+        return lines.joined(separator: "\n")
+    }
+
     private struct Archive: Encodable {
         let schemaVersion = 1
         let exportedAt: Date

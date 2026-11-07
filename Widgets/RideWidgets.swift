@@ -6,7 +6,7 @@ import WidgetKit
 
 struct WeeklyMilesWidget: Widget {
     var body: some WidgetConfiguration {
-        rideWidget(.weeklyMiles, name: "Miles this week", description: "Distance ridden since the start of the week.",
+        rideWidget(.weeklyMiles, name: "Distance this week", description: "Distance ridden since the start of the week.",
                    families: RideWidgetFamilies.large + RideWidgetFamilies.accessory) { WeeklyMilesView(snapshot: $0) }
     }
 }
@@ -81,11 +81,12 @@ extension WidgetFamily {
 extension RideWidgetSnapshot {
     var accent: Color { (theme.flatMap(RideTheme.init(rawValue:)) ?? .tronBlue).color }
     var ridesText: String { week.rideCount == 1 ? "1 ride" : "\(week.rideCount) rides" }
-    var goalText: String { String(format: "%.0f", weeklyGoalMiles) }
+    var unit: RideUnitSystem { .selected }
+    var weekText: String { distanceNumber(week.distance) }
+    var goalText: String { distanceNumber(weeklyGoalMiles * RideUnits.metersPerMile) }
     var streakText: String { weekStreak == 1 ? "1 week" : "\(weekStreak) weeks" }
+    func distanceNumber(_ meters: Double) -> String { String(format: "%.1f", meters / unit.metersPerUnit) }
 }
-
-private func miles(_ meters: Double) -> String { String(format: "%.1f", meters / RideUnits.metersPerMile) }
 
 private func duration(_ seconds: TimeInterval) -> String {
     Duration.seconds(seconds).formatted(.units(allowed: [.hours, .minutes], width: .narrow))
@@ -156,34 +157,35 @@ struct WeeklyMilesView: View {
     @Environment(\.widgetFamily) private var family
 
     var body: some View {
-        let value = snapshot.week.milesText
+        let value = snapshot.weekText
+        let unit = snapshot.unit.distanceSymbol
         switch family {
         case .accessoryInline:
-            Label("\(value) mi this week", systemImage: "scooter")
+            Label("\(value) \(unit) this week", systemImage: "scooter")
         case .accessoryCircular:
             VStack(spacing: 0) {
                 Image(systemName: "scooter").font(.caption2).widgetAccentable()
                 Text(value).font(.headline).monospacedDigit().minimumScaleFactor(0.5)
-                Text("mi").font(.caption2)
+                Text(unit).font(.caption2)
             }
-            .accessibilityLabel("\(value) miles this week")
+            .accessibilityLabel("\(value) \(unit) this week")
         #if os(watchOS)
         case .accessoryCorner:
             Text(value).font(.title3.bold()).monospacedDigit()
                 .widgetCurvesContent()
-                .widgetLabel { Text("mi this week") }
+                .widgetLabel { Text("\(unit) this week") }
         #endif
         case .accessoryRectangular:
-            RectangularStat(title: "This week", systemImage: "scooter", value: "\(value) mi", caption: snapshot.ridesText)
+            RectangularStat(title: "This week", systemImage: "scooter", value: "\(value) \(unit)", caption: snapshot.ridesText)
         case _ where family.isMedium:
             HStack(spacing: 16) {
                 BigStat(title: "This week", systemImage: "scooter", value: value,
-                        caption: "miles · \(snapshot.ridesText)", accent: snapshot.accent)
+                        caption: "\(unit) · \(snapshot.ridesText)", accent: snapshot.accent)
                 DailyMilesChart(snapshot: snapshot)
             }
         default:
             BigStat(title: "This week", systemImage: "scooter", value: value,
-                    caption: "miles · \(snapshot.ridesText)", accent: snapshot.accent)
+                    caption: "\(unit) · \(snapshot.ridesText)", accent: snapshot.accent)
         }
     }
 }
@@ -222,22 +224,22 @@ struct WeeklyGoalView: View {
     @Environment(\.widgetFamily) private var family
 
     private var caption: String {
-        snapshot.goalMet ? "Goal reached" : String(format: "%.1f mi to go", snapshot.milesToGoal)
+        snapshot.goalMet ? "Goal reached" : "\(snapshot.distanceNumber(snapshot.milesToGoal * RideUnits.metersPerMile)) \(snapshot.unit.distanceSymbol) to go"
     }
 
     var body: some View {
         switch family {
         case .accessoryInline:
-            Label("\(snapshot.week.milesText)/\(snapshot.goalText) mi goal", systemImage: "target")
+            Label("\(snapshot.weekText)/\(snapshot.goalText) \(snapshot.unit.distanceSymbol) goal", systemImage: "target")
         case .accessoryCircular:
             Gauge(value: snapshot.goalProgress) {
                 Image(systemName: "scooter")
             } currentValueLabel: {
-                Text(snapshot.week.milesText).monospacedDigit()
+                Text(snapshot.weekText).monospacedDigit()
             }
             .gaugeStyle(.accessoryCircularCapacity)
             .widgetAccentable()
-            .accessibilityLabel("\(snapshot.week.milesText) of \(snapshot.goalText) miles")
+            .accessibilityLabel("\(snapshot.weekText) of \(snapshot.goalText) \(snapshot.unit.distanceSymbol)")
         #if os(watchOS)
         case .accessoryCorner:
             Image(systemName: snapshot.goalMet ? "checkmark" : "scooter")
@@ -250,7 +252,7 @@ struct WeeklyGoalView: View {
         case .accessoryRectangular:
             VStack(alignment: .leading, spacing: 2) {
                 Label("Weekly goal", systemImage: "target").font(.caption.weight(.semibold)).widgetAccentable()
-                Text("\(snapshot.week.milesText) of \(snapshot.goalText) mi").font(.headline).monospacedDigit()
+                Text("\(snapshot.weekText) of \(snapshot.goalText) \(snapshot.unit.distanceSymbol)").font(.headline).monospacedDigit()
                 Gauge(value: snapshot.goalProgress) { EmptyView() }
                     .gaugeStyle(.accessoryLinearCapacity)
                     .widgetAccentable()
@@ -268,10 +270,10 @@ struct WeeklyGoalView: View {
                         .stroke(snapshot.accent, style: StrokeStyle(lineWidth: 10, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                     VStack(spacing: 0) {
-                        Text(snapshot.week.milesText)
+                        Text(snapshot.weekText)
                             .font(.title2.weight(.bold)).monospacedDigit()
                             .foregroundStyle(.white)
-                        Text("of \(snapshot.goalText) mi").font(.caption2).foregroundStyle(RideTheme.secondaryText)
+                        Text("of \(snapshot.goalText) \(snapshot.unit.distanceSymbol)").font(.caption2).foregroundStyle(RideTheme.secondaryText)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -341,28 +343,31 @@ struct LastRideView: View {
 
     @ViewBuilder
     private func content(_ ride: RideWidgetSnapshot.LastRide) -> some View {
-        let distance = miles(ride.distance)
+        let distance = snapshot.distanceNumber(ride.distance)
+        let unit = snapshot.unit.distanceSymbol
+        let speed = ride.isTrimmedEstimate == true ? "Unavailable" : RideUnits.speed(ride.averageSpeed)
+        let distanceCaption = ride.isTrimmedEstimate == true ? "\(unit) estimated" : unit
         let when = ride.endedAt.formatted(.relative(presentation: .named))
         switch family {
         case .accessoryInline:
-            Label("Last ride \(distance) mi", systemImage: "scooter")
+            Label("Last ride \(distance) \(distanceCaption)", systemImage: "scooter")
         case .accessoryRectangular:
-            RectangularStat(title: "Last ride", systemImage: "scooter", value: "\(distance) mi",
-                            caption: "\(duration(ride.duration)) · \(RideUnits.speed(ride.averageSpeed))")
+            RectangularStat(title: "Last ride", systemImage: "scooter", value: "\(distance) \(unit)",
+                            caption: ride.isTrimmedEstimate == true ? "Estimated distance" : "\(duration(ride.duration)) · \(speed)")
         case _ where family.isMedium:
             HStack(spacing: 16) {
-                BigStat(title: "Last ride", systemImage: "scooter", value: distance, caption: "miles · \(when)",
+                BigStat(title: "Last ride", systemImage: "scooter", value: distance, caption: "\(distanceCaption) · \(when)",
                         accent: snapshot.accent)
                 VStack(alignment: .leading, spacing: 10) {
                     detail("Time", duration(ride.duration))
-                    detail("Moving avg", RideUnits.speed(ride.averageSpeed))
-                    detail("This month", "\(miles(snapshot.monthDistance)) mi")
+                    detail("Moving avg", speed)
+                    detail("This month", "\(snapshot.distanceNumber(snapshot.monthDistance)) \(unit)")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         default:
             BigStat(title: "Last ride", systemImage: "scooter", value: distance,
-                    caption: "mi · \(duration(ride.duration)) · \(when)", accent: snapshot.accent)
+                    caption: "\(distanceCaption) · \(duration(ride.duration)) · \(when)", accent: snapshot.accent)
         }
     }
 
@@ -430,7 +435,7 @@ struct RideWeatherWidgetView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .widgetAccentable()
-                Text(weather.summary)
+                Text(weather.displaySummary)
                     .font(.caption)
                     .lineLimit(2)
                     .minimumScaleFactor(0.8)
@@ -455,7 +460,7 @@ struct RideWeatherWidgetView: View {
                     .foregroundStyle(.white)
                     .lineLimit(2)
                     .minimumScaleFactor(0.8)
-                Text(weather.summary)
+                Text(weather.displaySummary)
                     .font(.caption)
                     .foregroundStyle(RideTheme.secondaryText)
                     .lineLimit(family.isMedium ? 2 : 3)

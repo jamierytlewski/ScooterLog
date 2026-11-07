@@ -704,6 +704,61 @@ final class RideFlowTests: XCTestCase {
     }
 
     @MainActor
+    func testTrimPreviewSavesSeparateRide() throws {
+        let app = XCUIApplication()
+        app.launch()
+        try clearHistory(in: app)
+        app.terminate()
+        app.launchArguments = ["-ScooterLogStubHistory"]
+        app.launch()
+        openHistory(in: app)
+        let rows = rideRows(in: app)
+        XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 10))
+        let count = rows.count
+        rows.firstMatch.tap()
+        let trim = app.buttons["Trim ride"]
+        reveal(trim, in: app)
+        XCTAssertTrue(trim.isHittable)
+        trim.tap()
+        let start = app.sliders["Trim start"]
+        XCTAssertTrue(start.waitForExistence(timeout: 5))
+        start.adjust(toNormalizedSliderPosition: 0.4)
+        app.buttons["Preview trimmed ride"].tap()
+        let save = app.buttons["Save trimmed copy"]
+        reveal(save, in: app)
+        XCTAssertTrue(save.isHittable)
+        capture("Trimmed ride preview")
+        save.tap()
+        try confirm("Save a trimmed copy?", with: "Save copy", in: app)
+        XCTAssertTrue(app.navigationBars["Ride"].waitForExistence(timeout: 5))
+        app.navigationBars["Ride"].buttons.firstMatch.tap()
+        XCTAssertTrue(waitForCount(rows, count + 1))
+    }
+
+    @MainActor
+    func testMetricAndScooterProfiles() throws {
+        let app = XCUIApplication()
+        app.launch()
+        app.buttons["settings"].tap()
+        let units = app.buttons["rideUnits"]
+        reveal(units, in: app)
+        XCTAssertTrue(units.isHittable)
+        units.tap()
+        app.buttons["Kilometers and km/h"].tap()
+        let profiles = app.buttons["Scooter profiles"]
+        reveal(profiles, in: app)
+        profiles.tap()
+        app.buttons["Add scooter"].tap()
+        let name = app.textFields["Scooter name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.tap()
+        name.typeText("Test scooter")
+        capture("Scooter profile editor")
+        app.buttons["Save"].tap()
+        XCTAssertTrue(app.staticTexts["Test scooter"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testSelectionToolbarFitsLargestDynamicType() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
