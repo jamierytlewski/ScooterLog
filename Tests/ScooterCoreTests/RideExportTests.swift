@@ -129,6 +129,63 @@ struct RideExportTests {
         }
     }
 
+    @Test func wholeRouteIncludesEndpointsButPreservesGPSGaps() throws {
+        let original = ride()
+        let segments = try RideExport.sharedRouteSegments(original, privacyRadius: nil)
+        #expect(segments == original.routeSegments)
+        #expect(segments.first?.first == original.samples.first)
+        #expect(segments.last?.last == original.samples.last)
+        #expect(segments.map(\.count) == [5, 2])
+        let speedSegments = try RideExport.sharedSpeedSegments(original, privacyRadius: nil)
+        #expect(speedSegments.map(\.band) == original.speedSegments.map(\.band))
+        #expect(speedSegments.map(\.samples) == original.speedSegments.map(\.samples))
+        #expect(throws: RideExport.PrivateRouteError.insufficientRoute) {
+            try RideExport.sharedRouteSegments(Ride(owner: "Active", startedAt: start), privacyRadius: nil)
+        }
+        #expect(throws: RideExport.PrivateRouteError.invalidPrivacyRadius) {
+            try RideExport.sharedRouteSegments(original, privacyRadius: 0)
+        }
+    }
+
+    @Test func protectedImageGeometryMatchesGPXAndKeepsLinesOutsidePrivacyZones() throws {
+        var original = Ride(owner: "Phone", startedAt: start)
+        for index in 0..<50 {
+            let time = start.addingTimeInterval(Double(index * 4))
+            let accepted = original.append(LocationSample(latitude: Double(index) * 0.0003, longitude: 0,
+                                                          timestamp: time, accuracy: 5,
+                                                          speed: [1.0, 3.0, 5.0, 9.0, -1.0][index % 5]),
+                                           receivedAt: time)
+            #expect(accepted)
+        }
+        original.end(at: start.addingTimeInterval(200))
+        let segments = try RideExport.sharedRouteSegments(original)
+        let xml = try XMLDocument(xmlString: RideExport.privateRouteGPX(original))
+        let points = try xml.nodes(forXPath: "//*[local-name()='trkpt']")
+        #expect(points.count == segments.flatMap { $0 }.count)
+        let first = try #require(original.samples.first)
+        let last = try #require(original.samples.last)
+        let heatMap = try RideExport.sharedSpeedSegments(original)
+        #expect(Set(heatMap.map(\.band)) == Set(RideSpeedBand.allCases))
+        for segment in heatMap {
+            #expect(segment.samples.allSatisfy { $0.distance(to: first) > 200 && $0.distance(to: last) > 200 })
+            for (a, b) in zip(segment.samples, segment.samples.dropFirst()) {
+                #expect(segment.band == RideSpeedBand(speed: b.speed))
+                #expect(segments.contains { route in
+                    zip(route, route.dropFirst()).contains { $0 == a && $1 == b }
+                })
+            }
+        }
+        for segment in segments {
+            for (a, b) in zip(segment, segment.dropFirst()) {
+                let clearance = min(a.distance(to: first), a.distance(to: last),
+                                    b.distance(to: first), b.distance(to: last))
+                #expect(clearance - a.distance(to: b) > 200)
+                #expect((0...15).contains(b.timestamp.timeIntervalSince(a.timestamp)))
+            }
+        }
+        #expect(original.samples.count == 50)
+    }
+
     @Test func privateRouteDoesNotConnectAcrossAnEndpointRevisit() throws {
         var ride = Ride(owner: "Phone", startedAt: start)
         let positions = Array(0...30) + Array((2...29).reversed()) + Array(3...60)

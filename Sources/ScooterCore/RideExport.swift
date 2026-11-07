@@ -18,6 +18,23 @@ public struct RideSpeedSegment: Identifiable, Sendable {
     public let id: Int
     public let band: RideSpeedBand
     public var samples: [LocationSample]
+
+    fileprivate static func grouped(_ routes: [[LocationSample]]) -> [Self] {
+        var segments: [Self] = []
+        var index = 0
+        for route in routes where route.count > 1 {
+            for pair in zip(route, route.dropFirst()) {
+                let band = RideSpeedBand(speed: pair.1.speed)
+                if let last = segments.last, last.band == band, last.samples.last == pair.0 {
+                    segments[segments.count - 1].samples.append(pair.1)
+                } else {
+                    segments.append(Self(id: index, band: band, samples: [pair.0, pair.1]))
+                }
+                index += 1
+            }
+        }
+        return segments
+    }
 }
 
 extension Ride {
@@ -33,20 +50,7 @@ extension Ride {
     }
 
     public var speedSegments: [RideSpeedSegment] {
-        var segments: [RideSpeedSegment] = []
-        var index = 0
-        for route in routeSegments where route.count > 1 {
-            for pair in zip(route, route.dropFirst()) {
-                let band = RideSpeedBand(speed: pair.1.speed)
-                if let last = segments.last, last.band == band, last.samples.last == pair.0 {
-                    segments[segments.count - 1].samples.append(pair.1)
-                } else {
-                    segments.append(RideSpeedSegment(id: index, band: band, samples: [pair.0, pair.1]))
-                }
-                index += 1
-            }
-        }
-        return segments
+        RideSpeedSegment.grouped(routeSegments)
     }
 }
 
@@ -54,6 +58,10 @@ public enum RideExport {
     public enum PrivateRouteError: Error, Equatable {
         case invalidPrivacyRadius
         case insufficientRoute
+    }
+
+    public static func sharedSpeedSegments(_ ride: Ride, privacyRadius: Double? = 200) throws -> [RideSpeedSegment] {
+        RideSpeedSegment.grouped(try sharedRouteSegments(ride, privacyRadius: privacyRadius))
     }
 
     /// Shared geometry for image and GPX exports. A nil radius explicitly includes the whole route.

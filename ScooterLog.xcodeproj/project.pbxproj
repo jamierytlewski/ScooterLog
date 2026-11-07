@@ -37,6 +37,7 @@
 		73CA0F1D6E7F78EA9F57F829 /* ScooterWatchWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2FDB91D267433FCCD36E9D /* ScooterWatchWidgets.swift */; };
 		74666337A7D35CDCD50F76D7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E1CD3C35BC8DC3C922316783 /* PrivacyInfo.xcprivacy */; };
 		7A2E31AD595B6917A850C0B3 /* RideController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125F3B5377547197A4F82337 /* RideController.swift */; };
+		883BF809C9A9652DB1B5FD32 /* RideShareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C15591FB144F1CD55873C8 /* RideShareView.swift */; };
 		8CD36DF6FDD65FD847436093 /* RideDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE329B9BCAD2567197CE3563 /* RideDashboard.swift */; };
 		8F1E7ECFB6A9D4591314765C /* ScooterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0342FAA71038BAA8A73C8291 /* ScooterCore */; };
 		949A9AD585FB80DE5E6E9068 /* RideWidgetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C071341CB2A1D7D4B3B8035 /* RideWidgetStore.swift */; };
@@ -145,6 +146,7 @@
 		1192E71FAD2CB5231E4BDDEC /* ScooterWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScooterWatchApp.swift; sourceTree = "<group>"; };
 		11C856AADEC61D32C122D24A /* DirectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectionsView.swift; sourceTree = "<group>"; };
 		125F3B5377547197A4F82337 /* RideController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideController.swift; sourceTree = "<group>"; };
+		15C15591FB144F1CD55873C8 /* RideShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideShareView.swift; sourceTree = "<group>"; };
 		26D5D84073CE0C8F8AFC4C86 /* ScooterLogApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScooterLogApp.swift; sourceTree = "<group>"; };
 		2B533FDC214299797A5009DC /* jamierytlewski-crispy-eureka */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "jamierytlewski-crispy-eureka"; path = .; sourceTree = SOURCE_ROOT; };
 		33CB0780E7900DDF7FC6235D /* ScooterLiveActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ScooterLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -213,6 +215,7 @@
 			children = (
 				8E672D362BACD28E2DA3CDBF /* CloudRideSync.swift */,
 				F874475C78CFE06A8EB339CE /* LiveActivityManager.swift */,
+				15C15591FB144F1CD55873C8 /* RideShareView.swift */,
 				26D5D84073CE0C8F8AFC4C86 /* ScooterLogApp.swift */,
 			);
 			path = App;
@@ -566,6 +569,7 @@
 				7A2E31AD595B6917A850C0B3 /* RideController.swift in Sources */,
 				8CD36DF6FDD65FD847436093 /* RideDashboard.swift in Sources */,
 				66628ED85C95DA86C59D21EE /* RideIntents.swift in Sources */,
+				883BF809C9A9652DB1B5FD32 /* RideShareView.swift in Sources */,
 				0D7EB4683C77F5271E108FD0 /* RideTheme.swift in Sources */,
 				13F4F23E461873AA13B7C65B /* RideWeatherService.swift in Sources */,
 				D27A1EE0A7002D2B6C17FE83 /* RideWeatherView.swift in Sources */,

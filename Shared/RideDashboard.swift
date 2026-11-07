@@ -1082,8 +1082,6 @@ struct RideDetail: View {
     @State private var confirmDeletion = false
     @State private var showSpeedMap = true
     @State private var visibleMapCamera: MapCamera?
-    #if os(iOS)
-    #endif
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -1337,7 +1335,7 @@ private struct RideTrimView: View {
 }
 #endif
 
-private extension RideSpeedBand {
+extension RideSpeedBand {
     var color: Color {
         switch self {
         case .slow: .blue

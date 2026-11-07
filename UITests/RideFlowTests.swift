@@ -7,6 +7,63 @@ final class RideFlowTests: XCTestCase {
     }
 
     @MainActor
+    func testRideScorecardPrivacyAndSocialLayouts() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ScooterLogStubHistory"]
+        app.launch()
+        openHistory(in: app)
+        let ride = app.buttons.matching(identifier: "rideRow").firstMatch
+        XCTAssertTrue(ride.waitForExistence(timeout: 10))
+        ride.tap()
+        let share = app.buttons["shareRideStats"]
+        reveal(share, in: app)
+        share.tap()
+
+        XCTAssertTrue(app.navigationBars["Share ride"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Scorecard unavailable"].waitForExistence(timeout: 10),
+                      "The short fixture cannot bypass the default endpoint protection")
+        XCTAssertEqual(app.switches["shareSpeedHeatMap"].value as? String, "1")
+        let shareImage = app.buttons["shareScorecardImage"]
+        XCTAssertFalse(shareImage.isEnabled)
+
+        let visibility = app.buttons["shareRouteVisibility"]
+        visibility.tap()
+        app.buttons["Whole route"].tap()
+        let preview = app.images["rideScorecardPreview"]
+        XCTAssertTrue(preview.waitForExistence(timeout: 45))
+        XCTAssertTrue(preview.label.contains("Whole route"))
+        XCTAssertTrue(preview.label.contains("Route coloured by GPS speed"))
+        XCTAssertTrue(shareImage.isEnabled)
+
+        app.buttons["Square 1:1"].tap()
+        XCTAssertTrue(preview.waitForExistence(timeout: 45))
+        XCTAssertTrue(preview.label.contains("Square 1:1"))
+        let ratio = preview.frame.width / preview.frame.height
+        XCTAssertEqual(ratio, 1, accuracy: 0.01)
+        capture("Square speed heat scorecard")
+
+        app.switches["shareSpeedHeatMap"].tap()
+        XCTAssertTrue(preview.waitForExistence(timeout: 45))
+        XCTAssertFalse(preview.label.contains("Route coloured by GPS speed"))
+
+        visibility.tap()
+        app.buttons["Protected endpoints"].tap()
+        XCTAssertTrue(app.staticTexts["Scorecard unavailable"].waitForExistence(timeout: 10))
+        XCTAssertFalse(preview.exists, "A failed protected render must never retain the previous whole-route image")
+        XCTAssertFalse(shareImage.isEnabled)
+
+        visibility.tap()
+        app.buttons["Stats only"].tap()
+        XCTAssertTrue(preview.waitForExistence(timeout: 10))
+        XCTAssertTrue(preview.label.contains("Stats only"))
+        XCTAssertFalse(app.switches["shareSpeedHeatMap"].isEnabled)
+        app.buttons["Portrait 4:5"].tap()
+        XCTAssertTrue(preview.waitForExistence(timeout: 10))
+        XCTAssertEqual(preview.frame.width / preview.frame.height, 0.8, accuracy: 0.01)
+        capture("Portrait stats-only scorecard")
+    }
+
+    @MainActor
     func testCaptureSubmissionAssets() throws {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["SCOOTERLOG_CAPTURE"] == "1",
                           "Opt-in capture flow for an isolated simulator seeded with Tools/SeedSubmissionDemo.swift.")

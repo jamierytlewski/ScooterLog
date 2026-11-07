@@ -57,6 +57,7 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
     private let storeURL: URL
     private var connectivity: WCSession?
     private var commandTimeout: Task<Void, Never>?
+    private var historyRequestID: UUID?
     #if os(iOS)
     private let liveActivity = LiveActivityManager()
     #endif
@@ -229,10 +230,12 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
     }
 
     func resendHistory() {
-        for ride in archive.completed { queueCompleted(ride) }
+        for ride in archive.completed { queueCompleted(ride, flush: false) }
+        flushOutbox()
     }
 
     func refreshConnection() {
+        refreshReachability()
         broadcast()
         flushOutbox()
         guard let session = companionSession, session.isReachable else { return }
@@ -240,14 +243,21 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
             let snapshot = reply["snapshot"] as? Data
             let places = reply["places"] as? Data
             let error = reply["error"] as? String
+            let supportsHistory = reply["historySyncVersion"] as? Int == 1
             Task { @MainActor in
                 if let snapshot { self.receiveSnapshot(snapshot) }
                 if let places { self.receivePlaces(places) }
                 if let error { self.report("Could not refresh companion: \(error)") }
+                if supportsHistory, self.historyRequestID == nil {
+                    let requestID = UUID()
+                    self.historyRequestID = requestID
+                    self.requestPeerHistory(after: nil, knownIDs: [], requestID: requestID)
+                }
             }
         }, errorHandler: { @Sendable error in
-            let message = error.localizedDescription
-            Task { @MainActor in self.report("Could not refresh companion: \(message)") }
+            Task { @MainActor in
+                self.handleLiveDeliveryError(error, operation: "Could not refresh companion")
+            }
         })
     }
 
@@ -516,7 +526,27 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         return session
     }
 
+    private func refreshReachability() {
+        reachable = companionSession?.isReachable ?? false
+    }
+
+    nonisolated static func isExpectedLiveDeliveryDelay(_ error: Error) -> Bool {
+        let error = error as NSError
+        return error.domain == WCErrorDomain && error.code == WCError.Code.notReachable.rawValue
+    }
+
+    private func handleLiveDeliveryError(_ error: Error, operation: String) {
+        refreshReachability()
+        if Self.isExpectedLiveDeliveryDelay(error) {
+            // Reachability can change after the send check; the context transport remains independent.
+            logger.notice("Immediate companion delivery deferred until the next connection: \(error.localizedDescription)")
+        } else {
+            report("\(operation): \(error.localizedDescription)")
+        }
+    }
+
     private func broadcast() {
+        refreshReachability()
         lastBroadcast = .now
         guard let session = companionSession else { return }
         do {
@@ -524,9 +554,8 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
             try session.updateApplicationContext(context)
             if session.isReachable {
                 session.sendMessage(context, replyHandler: nil, errorHandler: { @Sendable error in
-                    let message = error.localizedDescription
                     Task { @MainActor in
-                        self.report("Live companion update delayed; queued context remains available: \(message)")
+                        self.handleLiveDeliveryError(error, operation: "Live companion update delayed; queued context remains available")
                     }
                 })
             }
@@ -536,18 +565,66 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
     private func companionContext() throws -> [String: Any] {
         let snapshot = PeerSnapshot(ride: archive.active?.preview(), sentAt: .now, recording: recording,
                                     guidance: directions.guidance)
-        return ["snapshot": try JSONEncoder().encode(snapshot), "places": try JSONEncoder().encode(places)]
+        return ["snapshot": try JSONEncoder().encode(snapshot), "places": try JSONEncoder().encode(places),
+                "historySyncVersion": 1]
+    }
+
+    private func requestPeerHistory(after: UUID?, knownIDs: Set<UUID>, requestID: UUID) {
+        guard historyRequestID == requestID else { return }
+        guard let session = companionSession, session.isReachable else {
+            historyRequestID = nil
+            return
+        }
+        var message: [String: Any] = ["requestHistoryPage": true]
+        if let after { message["afterRide"] = after.uuidString }
+        session.sendMessage(message, replyHandler: { @Sendable reply in
+            let data = reply["historyPage"] as? Data
+            let error = reply["error"] as? String
+            Task { @MainActor in
+                guard self.historyRequestID == requestID else { return }
+                do {
+                    if let error {
+                        throw NSError(domain: "ScooterLog", code: 1, userInfo: [NSLocalizedDescriptionKey: error])
+                    }
+                    guard let data else { throw CocoaError(.coderReadCorrupt) }
+                    let page = try JSONDecoder().decode(RideHistoryPage.self, from: data)
+                    guard page.isValid(after: after) else { throw CocoaError(.coderReadCorrupt) }
+                    let known = knownIDs.union(page.rideIDs)
+                    if page.hasMore, let last = page.rideIDs.last {
+                        self.requestPeerHistory(after: last, knownIDs: known, requestID: requestID)
+                    } else {
+                        self.historyRequestID = nil
+                        for ride in self.archive.completed where !known.contains(ride.id) {
+                            self.queueCompleted(ride, flush: false)
+                        }
+                        self.flushOutbox()
+                    }
+                } catch {
+                    self.historyRequestID = nil
+                    self.report("Could not reconcile completed companion rides: \(error.localizedDescription)")
+                }
+            }
+        }, errorHandler: { @Sendable error in
+            Task { @MainActor in
+                guard self.historyRequestID == requestID else { return }
+                self.historyRequestID = nil
+                self.handleLiveDeliveryError(error, operation: "Could not reconcile completed companion rides")
+            }
+        })
     }
 
     private var outbox: URL { storeURL.deletingLastPathComponent().appendingPathComponent("Outbox") }
 
-    private func queueCompleted(_ ride: Ride) {
+    private func queueCompleted(_ ride: Ride, flush: Bool = true) {
         guard connectivity != nil else { return }
         do {
             try FileManager.default.createDirectory(at: outbox, withIntermediateDirectories: true)
             let url = outbox.appendingPathComponent("\(ride.id.uuidString).json")
-            try JSONEncoder().encode(ride).write(to: url, options: .atomic)
-            flushOutbox()
+            // WatchConnectivity may still be reading this URL; queued completed rides are immutable.
+            if !FileManager.default.fileExists(atPath: url.path) {
+                try JSONEncoder().encode(ride).write(to: url, options: .atomic)
+            }
+            if flush { flushOutbox() }
         } catch { report("Ride saved locally, but companion sync could not be queued: \(error.localizedDescription)") }
     }
 
@@ -592,25 +669,21 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
 extension RideController: WCSessionDelegate {
     nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: (any Error)?) {
         let message = error?.localizedDescription
-        let reachable = session.isReachable
         let snapshot = session.receivedApplicationContext["snapshot"] as? Data
         let places = session.receivedApplicationContext["places"] as? Data
         Task { @MainActor in
             if let message { self.report("Companion connection: \(message)") }
-            self.reachable = reachable
-            self.broadcast()
-            self.flushOutbox()
+            self.refreshReachability()
             if let snapshot { self.receiveSnapshot(snapshot) }
             if let places { self.receivePlaces(places) }
+            self.refreshConnection()
         }
     }
 
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
-        let reachable = session.isReachable
         Task { @MainActor in
-            self.reachable = reachable
-            self.broadcast()
-            self.flushOutbox()
+            self.refreshReachability()
+            self.refreshConnection()
         }
     }
 
@@ -654,9 +727,20 @@ extension RideController: WCSessionDelegate {
                              replyHandler: @escaping ([String: Any]) -> Void) {
         let rideID = message["endRide"] as? String
         let requestsSnapshot = message["requestSnapshot"] as? Bool == true
+        let requestsHistory = message["requestHistoryPage"] as? Bool == true
+        let afterID = message["afterRide"] as? String
         // WCSession owns the reply callback; it is called exactly once on the main actor.
         let reply = ReplyHandler(replyHandler)
         Task { @MainActor in
+            if requestsHistory, !requestsSnapshot, rideID == nil {
+                do {
+                    let after = afterID.flatMap(UUID.init(uuidString:))
+                    guard afterID == nil || after != nil else { throw CocoaError(.coderReadCorrupt) }
+                    let page = RideHistoryPage(rides: self.archive.completed, after: after)
+                    reply.call(["historyPage": try JSONEncoder().encode(page)])
+                } catch { reply.call(["error": error.localizedDescription]) }
+                return
+            }
             if requestsSnapshot, rideID == nil {
                 do { reply.call(try self.companionContext()) }
                 catch { reply.call(["error": error.localizedDescription]) }
@@ -737,8 +821,13 @@ extension RideController: WCSessionDelegate {
     }
 
     #if os(iOS)
-    nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}
-    nonisolated func sessionDidDeactivate(_ session: WCSession) { session.activate() }
+    nonisolated func sessionDidBecomeInactive(_ session: WCSession) {
+        Task { @MainActor in self.refreshReachability() }
+    }
+    nonisolated func sessionDidDeactivate(_ session: WCSession) {
+        session.activate()
+        Task { @MainActor in self.refreshReachability() }
+    }
     #endif
 }
 

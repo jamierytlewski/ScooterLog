@@ -262,6 +262,27 @@ public struct RideArchive: Codable, Equatable, Sendable {
     }
 }
 
+public struct RideHistoryPage: Codable, Equatable, Sendable {
+    public static let capacity = 64
+    public let rideIDs: [UUID]
+    public let hasMore: Bool
+
+    public init(rides: [Ride], after: UUID? = nil) {
+        var ids = Set(rides.filter { $0.endedAt != nil }.map(\.id))
+            .sorted { $0.uuidString < $1.uuidString }
+        if let after { ids.removeAll { $0.uuidString <= after.uuidString } }
+        rideIDs = Array(ids.prefix(Self.capacity))
+        hasMore = ids.count > Self.capacity
+    }
+
+    public func isValid(after: UUID? = nil) -> Bool {
+        let ids = rideIDs.map(\.uuidString)
+        let cursor = after?.uuidString ?? ""
+        return ids.count <= Self.capacity && ids == ids.sorted() && Set(ids).count == ids.count
+            && ids.allSatisfy { $0 > cursor } && (!hasMore || !ids.isEmpty)
+    }
+}
+
 public enum RideDisk {
     public static func load(from url: URL) throws -> RideArchive {
         guard FileManager.default.fileExists(atPath: url.path) else { return RideArchive() }

@@ -38,6 +38,72 @@ struct RideCompanionTests {
         #expect(try repository.load().recordingRequested == nil)
     }
 
+    @Test func historyReconciliationPagesAreBoundedCompleteAndPortable() throws {
+        var rides: [Ride] = []
+        for index in 0..<150 {
+            let id = try #require(UUID(uuidString: String(format: "00000000-0000-0000-0000-%012X", index)))
+            var ride = Ride(id: id, owner: "Phone", startedAt: start)
+            ride.end(at: start.addingTimeInterval(60))
+            rides.append(ride)
+        }
+        let active = Ride(owner: "Phone", startedAt: start)
+        let input = Array(rides.reversed()) + [active, rides[0]]
+        var cursor: UUID?
+        var received: [UUID] = []
+        var sizes: [Int] = []
+        repeat {
+            let page = RideHistoryPage(rides: input, after: cursor)
+            #expect(page.isValid(after: cursor))
+            #expect(try JSONDecoder().decode(RideHistoryPage.self, from: JSONEncoder().encode(page)) == page)
+            #expect(page.rideIDs.count <= RideHistoryPage.capacity)
+            received.append(contentsOf: page.rideIDs)
+            sizes.append(page.rideIDs.count)
+            if !page.hasMore { break }
+            guard let last = page.rideIDs.last else {
+                Issue.record("A non-final inventory page must contain a cursor")
+                return
+            }
+            cursor = last
+        } while true
+        #expect(received == rides.map(\.id))
+        #expect(sizes == [64, 64, 22])
+        #expect(!received.contains(active.id))
+        let finalPage = RideHistoryPage(rides: rides, after: rides[149].id)
+        #expect(finalPage.rideIDs.isEmpty)
+        #expect(!RideHistoryPage(rides: []).hasMore)
+    }
+
+    @Test func reconciliationInventoryDoesNotResurrectDeletedRides() throws {
+        var ride = Ride(owner: "Phone", startedAt: start)
+        ride.end(at: start.addingTimeInterval(60))
+        var archive = RideArchive()
+        archive.importCompleted(ride)
+        #expect(RideHistoryPage(rides: archive.completed).rideIDs == [ride.id])
+        archive.delete([ride.id])
+        #expect(RideHistoryPage(rides: archive.completed).rideIDs.isEmpty)
+        archive.importCompleted(ride)
+        #expect(RideHistoryPage(rides: archive.completed).rideIDs.isEmpty)
+    }
+
+    @Test func malformedHistoryPagesCannotLoopOrSkipBehindTheCursor() throws {
+        let low = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
+        let high = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000002"))
+        func page(_ ids: [UUID], hasMore: Bool = false) throws -> RideHistoryPage {
+            let data = try JSONSerialization.data(withJSONObject: [
+                "rideIDs": ids.map(\.uuidString), "hasMore": hasMore
+            ])
+            return try JSONDecoder().decode(RideHistoryPage.self, from: data)
+        }
+        #expect(try page([low, high]).isValid())
+        #expect(try !page([high, low]).isValid())
+        #expect(try !page([low, low]).isValid())
+        #expect(try !page([], hasMore: true).isValid())
+        #expect(try !page([low]).isValid(after: low))
+        #expect(try !page([low]).isValid(after: high))
+        #expect(try page([high]).isValid(after: low))
+        #expect(try !page(Array(repeating: low, count: 65)).isValid())
+    }
+
     @Test func oldSnapshotsDecodeWithoutGuidance() throws {
         let snapshot = PeerSnapshot(ride: Ride(owner: "iPhone", startedAt: start), sentAt: start, recording: true)
         let data = try JSONEncoder().encode(snapshot)
