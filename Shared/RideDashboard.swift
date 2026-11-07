@@ -420,13 +420,27 @@ struct RideDashboard: View {
                 get: { weeklyGoal * RideUnits.metersPerMile / units.metersPerUnit },
                 set: { weeklyGoal = $0 * units.metersPerUnit / RideUnits.metersPerMile }
             ), in: (RideWidgetSnapshot.goalRange.lowerBound * RideUnits.metersPerMile / units.metersPerUnit)...(RideWidgetSnapshot.goalRange.upperBound * RideUnits.metersPerMile / units.metersPerUnit), step: 5) {
+                #if os(watchOS)
+                Text(RideUnits.distance(weeklyGoal * RideUnits.metersPerMile, units: units))
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+                #else
                 LabeledContent("Weekly goal", value: RideUnits.distance(weeklyGoal * RideUnits.metersPerMile, units: units))
+                #endif
             }
             .accessibilityIdentifier("weeklyGoal")
         } header: {
+            #if os(watchOS)
+            Text("Weekly goal").foregroundStyle(RideTheme.secondaryText)
+            #else
             Text("Widgets").foregroundStyle(RideTheme.secondaryText)
+            #endif
         } footer: {
+            #if os(watchOS)
+            Text("Sets the target for your weekly mileage widget.").foregroundStyle(RideTheme.secondaryText)
+            #else
             Text("Used by the weekly goal widget on this device.").foregroundStyle(RideTheme.secondaryText)
+            #endif
         }
     }
 
@@ -697,6 +711,7 @@ struct RideDashboard: View {
             }
             .buttonStyle(.glassProminent)
             .tint(.red)
+            .foregroundStyle(.white)
             .labelStyle(.titleAndIcon)
             .disabled(controller.commandPending || (controller.isRemote && !controller.reachable))
             .accessibilityHint(controller.isRemote && !controller.reachable
