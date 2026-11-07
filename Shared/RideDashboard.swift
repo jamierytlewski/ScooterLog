@@ -202,7 +202,10 @@ struct RideDashboard: View {
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
                     health.refresh()
-                    weather.refresh()
+                    if controller.locationAuthorization == .authorizedWhenInUse
+                        || controller.locationAuthorization == .authorizedAlways {
+                        weather.refresh()
+                    }
                     publishWidgets()
                     controller.refreshConnection()
                     #if os(iOS)

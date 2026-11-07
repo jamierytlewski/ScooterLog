@@ -13,6 +13,7 @@ struct StartRideIntent: StartRideProtocol {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
+        await RideController.shared.waitForForeground()
         try RideController.shared.start()
         return .result(dialog: "ScooterLog is recording your ride on this device.")
     }

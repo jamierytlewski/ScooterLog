@@ -24,7 +24,9 @@ final class RideWeatherModel: ObservableObject {
     @Published private(set) var attribution: Attribution?
     /// The latest real forecast, shared with the widgets.
     @Published private(set) var widgetWeather: RideWidgetSnapshot.Weather?
-    private let location = PlanningLocation()
+    private let location = PlanningLocation(desiredAccuracy: kCLLocationAccuracyKilometer,
+                                            maxAccuracy: 5_000,
+                                            maxAge: 15 * 60)
     private let logger = Logger(subsystem: "com.scooterlog.app", category: "Weather")
     private var task: Task<Void, Never>?
     private static let freshness: TimeInterval = 15 * 60
@@ -45,7 +47,16 @@ final class RideWeatherModel: ObservableObject {
         state = .loading
         task = Task {
             do {
-                let coordinate = try await location.coordinate()
+                let coordinate: CLLocationCoordinate2D
+                do {
+                    coordinate = try await location.coordinate()
+                } catch PlanningLocationError.unavailable {
+                    if let fallback = RideController.shared.lastKnownCoordinate {
+                        coordinate = fallback
+                    } else {
+                        throw PlanningLocationError.unavailable
+                    }
+                }
                 let report = try await RideWeatherService.report(for: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude))
                 let assessment = RideWeather.assess(report)
                 state = .loaded(assessment, updated: .now)

@@ -7,6 +7,7 @@ struct ScooterWatchApp: App {
     init() {
         StartRideControlIntent.handler = {
             let controller = RideController.shared
+            await controller.waitForForeground()
             guard controller.displayedRide == nil else { return }
             controller.perform { try controller.start() }
         }

@@ -9,11 +9,11 @@ struct StartRideControlIntent: AppIntent {
     static let openAppWhenRun = true
     static let isDiscoverable = false
 
-    @MainActor static var handler: (() -> Void)?
+    @MainActor static var handler: (() async -> Void)?
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        Self.handler?()
+        await Self.handler?()
         return .result()
     }
 }

@@ -7,11 +7,13 @@ import WeatherKit
 enum RideWeatherService {
     static func report(for location: CLLocation) async throws -> WeatherReport {
         let now = Date.now
-        let (current, minutes, hours) = try await WeatherService.shared.weather(
+        async let minuteForecast = try? WeatherService.shared.weather(for: location, including: .minute)
+        let (current, hours) = try await WeatherService.shared.weather(
             for: location,
-            including: .current, .minute,
+            including: .current,
             .hourly(startDate: now.addingTimeInterval(-6 * 3600), endDate: now.addingTimeInterval(4 * 3600))
         )
+        let minutes = await minuteForecast
         let upcoming = hours.forecast.filter { $0.date > now && $0.date <= now.addingTimeInterval(3 * 3600) }
         let currentKind = kind(for: current.condition, precipitation: nil)
         let currentIntensity = millimetersPerHour(current.precipitationIntensity)

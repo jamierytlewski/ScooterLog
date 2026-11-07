@@ -120,17 +120,27 @@ enum PlanningLocationError: LocalizedError {
 @MainActor
 final class PlanningLocation: NSObject, @preconcurrency CLLocationManagerDelegate {
     private let manager = CLLocationManager()
+    private let maxAccuracy: CLLocationAccuracy
+    private let maxAge: TimeInterval
     private var continuation: CheckedContinuation<CLLocationCoordinate2D, any Error>?
     private var timeout: Task<Void, Never>?
 
-    override init() {
+    init(desiredAccuracy: CLLocationAccuracy = kCLLocationAccuracyNearestTenMeters,
+         maxAccuracy: CLLocationAccuracy = 100,
+         maxAge: TimeInterval = 60) {
+        self.maxAccuracy = maxAccuracy
+        self.maxAge = maxAge
         super.init()
         manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
+        manager.desiredAccuracy = desiredAccuracy
     }
 
     func coordinate() async throws -> CLLocationCoordinate2D {
         cancel()
+        if (manager.authorizationStatus == .authorizedAlways || manager.authorizationStatus == .authorizedWhenInUse),
+           let cached = manager.location, isUsable(cached) {
+            return cached.coordinate
+        }
         return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
             timeout = Task { [weak self] in
@@ -140,7 +150,7 @@ final class PlanningLocation: NSObject, @preconcurrency CLLocationManagerDelegat
             }
             switch manager.authorizationStatus {
             case .notDetermined: manager.requestWhenInUseAuthorization()
-            case .authorizedAlways, .authorizedWhenInUse: manager.requestLocation()
+            case .authorizedAlways, .authorizedWhenInUse: manager.startUpdatingLocation()
             default: finish(.failure(PlanningLocationError.permission))
             }
         }
@@ -151,25 +161,42 @@ final class PlanningLocation: NSObject, @preconcurrency CLLocationManagerDelegat
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         guard continuation != nil else { return }
         switch manager.authorizationStatus {
-        case .authorizedAlways, .authorizedWhenInUse: manager.requestLocation()
+        case .authorizedAlways, .authorizedWhenInUse:
+            if let cached = manager.location, isUsable(cached) {
+                finish(.success(cached.coordinate))
+            } else {
+                manager.startUpdatingLocation()
+            }
         case .notDetermined: break
         default: finish(.failure(PlanningLocationError.permission))
         }
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last(where: {
-            CLLocationCoordinate2DIsValid($0.coordinate) && $0.horizontalAccuracy >= 0 && $0.horizontalAccuracy <= 100
-                && abs($0.timestamp.timeIntervalSinceNow) <= 60
-        }) else {
-            finish(.failure(PlanningLocationError.unavailable))
-            return
-        }
+        guard let location = locations.last(where: isUsable) else { return }
         finish(.success(location.coordinate))
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
-        finish(.failure(error))
+        if let clError = error as? CLError {
+            switch clError.code {
+            case .locationUnknown:
+                return
+            case .denied:
+                finish(.failure(PlanningLocationError.permission))
+                return
+            default:
+                finish(.failure(PlanningLocationError.unavailable))
+                return
+            }
+        }
+        finish(.failure(PlanningLocationError.unavailable))
+    }
+
+    private func isUsable(_ location: CLLocation) -> Bool {
+        CLLocationCoordinate2DIsValid(location.coordinate)
+            && location.horizontalAccuracy >= 0 && location.horizontalAccuracy <= maxAccuracy
+            && abs(location.timestamp.timeIntervalSinceNow) <= maxAge
     }
 
     private func finish(_ result: Result<CLLocationCoordinate2D, any Error>) {

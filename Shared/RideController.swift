@@ -158,6 +158,17 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         }
     }
 
+    func waitForForeground() async {
+        for _ in 0..<60 {
+            #if os(iOS)
+            if UIApplication.shared.applicationState == .active { return }
+            #else
+            if WKApplication.shared().applicationState == .active { return }
+            #endif
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
     private func requireForeground() throws {
         #if os(iOS)
         guard UIApplication.shared.applicationState == .active else { throw RideFailure.foreground }
