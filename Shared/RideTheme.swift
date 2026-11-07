@@ -17,6 +17,20 @@ enum RideTheme: String, CaseIterable, Identifiable, Codable {
 
     var id: String { rawValue }
     var color: Color { Color(rawValue) }
+    var artworkGlow: Color {
+        switch self {
+        case .tronBlue: Color(red: 0.02, green: 0.48, blue: 0.82)
+        case .aresRed: Color(red: 0.82, green: 0.035, blue: 0.20)
+        }
+    }
+
+    var artworkGradient: LinearGradient {
+        LinearGradient(
+            colors: [Self.artworkBackground, artworkGlow.opacity(0.36), Self.artworkBackground],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
 
     var title: String {
         switch self {
@@ -54,14 +68,24 @@ struct ScooterArtwork: View {
     var body: some View {
         GeometryReader { geometry in
             let side = min(geometry.size.width, geometry.size.height * 1.35)
-            Image(theme == .tronBlue ? "ScooterBlue" : "ScooterRed")
-                .resizable()
-                .scaledToFill()
-                .frame(width: side, height: side)
-                .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+            ZStack {
+                RideTheme.artworkBackground
+                theme.artworkGradient
+                RadialGradient(
+                    colors: [theme.artworkGlow.opacity(0.42), .clear],
+                    center: .topTrailing,
+                    startRadius: 0,
+                    endRadius: side * 0.8
+                )
+                Image(theme == .tronBlue ? "ScooterBlue" : "ScooterRed")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: side, height: side)
+                    .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+                    .overlay(theme.artworkGradient.opacity(0.2))
+            }
         }
         .clipped()
-        .background(RideTheme.artworkBackground)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }

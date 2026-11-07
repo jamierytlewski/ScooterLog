@@ -16,8 +16,8 @@ struct ScooterLogApp: App {
     var body: some Scene {
         WindowGroup {
             RideDashboard(controller: controller)
-                .onChange(of: theme) { updateIcon() }
-                .onChange(of: scenePhase) { _, phase in
+                .onChange(of: theme, initial: false) { _, _ in updateIcon() }
+                .onChange(of: scenePhase, initial: false) { _, phase in
                     if phase == .active { updateIcon() }
                 }
         }

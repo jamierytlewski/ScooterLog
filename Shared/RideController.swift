@@ -10,10 +10,10 @@ import UIKit
 import WatchKit
 #endif
 
-enum RideFailure: LocalizedError {
+enum RideFailure: LocalizedError, CustomLocalizedStringResourceConvertible {
     case foreground, permission, remoteRide, noRide, storage, unreachable
 
-    var errorDescription: String? {
+    var localizedStringResource: LocalizedStringResource {
         switch self {
         case .foreground: "Open ScooterLog on this device to start location recording."
         case .permission: "Allow location access in Settings, then return to ScooterLog and start again."
@@ -23,6 +23,8 @@ enum RideFailure: LocalizedError {
         case .unreachable: "The recording device is unreachable. The ride has not been ended."
         }
     }
+
+    var errorDescription: String? { String(localized: localizedStringResource) }
 }
 
 @MainActor

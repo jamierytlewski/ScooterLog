@@ -775,8 +775,8 @@ struct DirectionsView: View {
         }
         .rideSurface()
         .navigationTitle("Directions")
-        .onChange(of: mode) { refresh() }
-        .onChange(of: model.selectedRouteID) { camera = .automatic }
+        .onChange(of: mode, initial: false) { _, _ in refresh() }
+        .onChange(of: model.selectedRouteID, initial: false) { _, _ in camera = .automatic }
         .onDisappear { if !model.isGuiding { model.cancel() } }
         .onAppear { showingGuidance = model.isGuiding && !guidanceDismissed }
         .onChange(of: model.isGuiding) { _, guiding in
@@ -901,7 +901,7 @@ struct TurnByTurnView: View {
                 .accessibilityHint("Pinch to zoom. The map follows your GPS location.")
                 .accessibilityIdentifier("liveRouteMap")
                 .frame(maxHeight: .infinity)
-                .onChange(of: model.currentLocation?.timestamp) { updateCamera() }
+                .onChange(of: model.currentLocation?.timestamp, initial: false) { _, _ in updateCamera() }
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
@@ -950,7 +950,7 @@ struct TurnByTurnView: View {
                             ProgressView("Waiting for an accurate GPS location...")
                         }
                         Toggle("Speak turns aloud", isOn: $voiceGuidance)
-                            .onChange(of: voiceGuidance) { model.setVoiceGuidance(voiceGuidance) }
+                            .onChange(of: voiceGuidance, initial: false) { _, value in model.setVoiceGuidance(value) }
                         #if DEBUG
                         if ProcessInfo.processInfo.arguments.contains("-ScooterLogStubNavigation") {
                             Button("Advance simulated location") { model.advanceSimulatedLocation() }

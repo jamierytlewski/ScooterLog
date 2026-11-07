@@ -9,7 +9,8 @@ typealias StartRideProtocol = AppIntent
 struct StartRideIntent: StartRideProtocol {
     static let title: LocalizedStringResource = "Start scooter ride"
     static let description = IntentDescription("Open ScooterLog and start GPS recording on this device. Allow location access first.")
-    static let openAppWhenRun = true
+    static var supportedModes: IntentModes { .foreground(.immediate) }
+    static var allowedExecutionTargets: IntentExecutionTargets { .main }
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
@@ -22,7 +23,8 @@ struct StartRideIntent: StartRideProtocol {
 struct EndRideIntent: AppIntent {
     static let title: LocalizedStringResource = "End scooter ride"
     static let description = IntentDescription("End and save the ride owned by this device. A companion-owned ride must be ended on its owner or through the connected app controls.")
-    static let openAppWhenRun = true
+    static var supportedModes: IntentModes { .foreground(.immediate) }
+    static var allowedExecutionTargets: IntentExecutionTargets { .main }
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {

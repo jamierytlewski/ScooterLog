@@ -183,19 +183,19 @@ struct RideDashboard: View {
                 .tint(theme.color)
             }
             .onAppear { handleHomeScreenStart() }
-            .onChange(of: homeScreen.startRequested) { handleHomeScreenStart() }
+            .onChange(of: homeScreen.startRequested, initial: false) { _, _ in handleHomeScreenStart() }
             .alert("A ride is already active", isPresented: $showActiveRideNotice) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text("Continue it here or end it on its recording device before starting a new ride.")
             }
             #endif
-            .onChange(of: theme) {
+            .onChange(of: theme, initial: false) { _, _ in
                 controller.refreshLiveActivityAppearance()
                 publishWidgets()
             }
-            .onChange(of: weeklyGoal) { publishWidgets() }
-            .onChange(of: weather.widgetWeather) { publishWidgets() }
+            .onChange(of: weeklyGoal, initial: false) { _, _ in publishWidgets() }
+            .onChange(of: weather.widgetWeather, initial: false) { _, _ in publishWidgets() }
             .onReceive(controller.$archive) { publishWidgets($0) }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {

@@ -6,14 +6,24 @@ import AppIntents
 struct StartRideControlIntent: AppIntent {
     static let title: LocalizedStringResource = "Start ride"
     static let description = IntentDescription("Open ScooterLog and start recording a ride.")
-    static let openAppWhenRun = true
+    static var supportedModes: IntentModes { .foreground(.immediate) }
+    static var allowedExecutionTargets: IntentExecutionTargets { .main }
     static let isDiscoverable = false
 
     @MainActor static var handler: (() async -> Void)?
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        await Self.handler?()
+        guard let handler = Self.handler else { throw StartRideControlIntentError.handlerUnavailable }
+        await handler()
         return .result()
+    }
+}
+
+private enum StartRideControlIntentError: Error, CustomLocalizedStringResourceConvertible {
+    case handlerUnavailable
+
+    var localizedStringResource: LocalizedStringResource {
+        "ScooterLog couldn't start a ride. Open the app and try again."
     }
 }
