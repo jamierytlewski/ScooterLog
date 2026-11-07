@@ -47,16 +47,7 @@ final class RideWeatherModel: ObservableObject {
         state = .loading
         task = Task {
             do {
-                let coordinate: CLLocationCoordinate2D
-                do {
-                    coordinate = try await location.coordinate()
-                } catch PlanningLocationError.unavailable {
-                    if let fallback = RideController.shared.lastKnownCoordinate {
-                        coordinate = fallback
-                    } else {
-                        throw PlanningLocationError.unavailable
-                    }
-                }
+                let coordinate = try await location.coordinate()
                 let report = try await RideWeatherService.report(for: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude))
                 let assessment = RideWeather.assess(report)
                 state = .loaded(assessment, updated: .now)

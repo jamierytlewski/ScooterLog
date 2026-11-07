@@ -47,7 +47,7 @@ struct RideDashboard: View {
     #if os(iOS)
     @ObservedObject private var homeScreen = HomeScreenActions.shared
     @State private var tab: DashboardTab = .ride
-    @State private var rideBarHiders: Set<String> = []
+    @State private var rideBarVisibility = RideBarVisibility()
     #endif
     @AppStorage(RideTheme.preferenceKey) private var theme: RideTheme = .tronBlue
     @Environment(\.scenePhase) private var scenePhase
@@ -74,10 +74,8 @@ struct RideDashboard: View {
                 NavigationStack { SavedPlacesView(controller: controller) }
             }
         }
-        .tabViewBottomAccessory(isEnabled: rideBarHiders.isEmpty) { rideAccessory }
-        .environment(\.setRideBarHidden, SetRideBarHiddenAction { reason, hidden in
-            if hidden { rideBarHiders.insert(reason) } else { rideBarHiders.remove(reason) }
-        })
+        .tabViewBottomAccessory(isEnabled: rideBarVisibility.isVisible) { rideAccessory }
+        .environment(\.rideBarVisibility, rideBarVisibility)
         .tint(theme.color)
         .modifier(endRideConfirmation)
         #else
@@ -530,8 +528,13 @@ struct RideDashboard: View {
             if controller.isRemote, let peer = controller.peer {
                 Text("\(peer.recording ? "Owner reports recording" : "Owner reports recording paused") • Updated \(peer.sentAt, style: .relative) ago")
                     .font(.caption).foregroundStyle(RideTheme.secondaryText)
-                Text(controller.reachable ? "Companion reachable" : "Companion offline; metrics may be stale")
-                    .font(.caption).foregroundStyle(RideTheme.secondaryText)
+                if controller.reachable {
+                    Text("Companion reachable")
+                        .font(.caption).foregroundStyle(RideTheme.secondaryText)
+                } else {
+                    Text("Recording device offline; metrics may be stale. Reconnect, or end the ride on that device.")
+                        .font(.caption).foregroundStyle(RideTheme.secondaryText)
+                }
             } else if !controller.recording {
                 notice("Recovered ride: recording is paused. Resume in the foreground or end it. The gap stays unknown.",
                        systemImage: "pause.circle")
@@ -582,29 +585,37 @@ struct RideDashboard: View {
             .accessibilityShowsLargeContentViewer()
     }
 
+    private var recordingStatus: RideRecordingStatus {
+        RideRecordingStatus(isRemote: controller.isRemote,
+                            isRecording: controller.isRemote ? controller.peer?.recording == true : controller.recording,
+                            isReachable: controller.reachable)
+    }
+
     @ViewBuilder private var rideAccessoryContent: some View {
         if let ride = controller.displayedRide {
-            HStack(spacing: 12) {
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    HStack(spacing: 6) {
-                        Image(systemName: controller.recording || controller.isRemote ? "record.circle" : "pause.circle")
-                            .foregroundStyle(theme.color)
-                        Text(RideFormat.duration(ride.elapsed(at: context.date)))
-                        Text("·").foregroundStyle(.secondary)
-                        Text(RideFormat.distance(ride.distance))
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 12) {
+                    Button { tab = .ride } label: {
+                        RideAccessoryStatus(status: recordingStatus, startedAt: ride.startedAt,
+                                            distance: ride.distance, color: theme.color)
                     }
-                    .font(.subheadline.weight(.semibold))
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Ride in progress")
-                    .accessibilityValue("\(RideFormat.spokenDuration(ride.elapsed(at: context.date))), \(RideFormat.distance(ride.distance))")
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Shows ride status and recording-device details.")
+                    .accessibilityIdentifier("rideAccessoryDetails")
+                    Spacer(minLength: 0)
+                    rideActionButton
                 }
-                .contentShape(.rect)
-                .onTapGesture { tab = .ride }
-                Spacer(minLength: 0)
-                rideActionButton
+                if controller.isRemote && !controller.reachable {
+                    Button { tab = .ride } label: {
+                        Text("Device offline. Reconnect, or end the ride on that device.")
+                            .font(.caption)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Reconnect, or end the ride on the recording device.")
+                    .accessibilityIdentifier("offlineRideDetails")
+                }
             }
             .padding(.leading, 16)
             .padding(.trailing, 6)
@@ -649,6 +660,9 @@ struct RideDashboard: View {
             .tint(.red)
             .labelStyle(.titleAndIcon)
             .disabled(controller.commandPending || (controller.isRemote && !controller.reachable))
+            .accessibilityHint(controller.isRemote && !controller.reachable
+                               ? Text("Reconnect, or end the ride on the recording device.")
+                               : Text("Asks for confirmation before saving the ride."))
         }
     }
 
@@ -1172,17 +1186,21 @@ private struct EndRideConfirmation: ViewModifier {
     }
 }
 
-struct SetRideBarHiddenAction {
-    let action: (_ reason: String, _ hidden: Bool) -> Void
+@Observable
+@MainActor
+final class RideBarVisibility {
+    private var hiddenReasons: Set<String> = []
 
-    func callAsFunction(_ reason: String, _ hidden: Bool) {
-        action(reason, hidden)
+    var isVisible: Bool { hiddenReasons.isEmpty }
+
+    func setHidden(_ hidden: Bool, reason: String) {
+        if hidden { hiddenReasons.insert(reason) } else { hiddenReasons.remove(reason) }
     }
 }
 
 extension EnvironmentValues {
     /// Lets a focused screen hide the iPhone tab bar and its Start/End accessory.
-    @Entry var setRideBarHidden = SetRideBarHiddenAction { _, _ in }
+    @Entry var rideBarVisibility: RideBarVisibility?
 }
 
 extension View {
@@ -1194,15 +1212,62 @@ extension View {
 private struct RideBarHiding: ViewModifier {
     let hidden: Bool
     let reason: String
-    @Environment(\.setRideBarHidden) private var setHidden
+    @Environment(\.rideBarVisibility) private var visibility
 
     func body(content: Content) -> some View {
         content
             #if os(iOS)
             .toolbarVisibility(hidden ? .hidden : .automatic, for: .tabBar)
             #endif
-            .onAppear { setHidden(reason, hidden) }
-            .onChange(of: hidden) { _, hidden in setHidden(reason, hidden) }
-            .onDisappear { setHidden(reason, false) }
+            .onAppear { visibility?.setHidden(hidden, reason: reason) }
+            .onChange(of: hidden) { _, hidden in visibility?.setHidden(hidden, reason: reason) }
+            .onDisappear { visibility?.setHidden(false, reason: reason) }
     }
 }
+
+#if os(iOS)
+private struct RideAccessoryStatus: View {
+    let status: RideRecordingStatus
+    let startedAt: Date
+    let distance: Double
+    let color: Color
+
+    private var title: LocalizedStringResource {
+        switch status {
+        case .recording: "Recording"
+        case .paused: "Recording paused"
+        case .remoteRecording: "Device reports recording"
+        case .remotePaused: "Device reports recording paused"
+        case .remoteOffline: "Recording device offline"
+        }
+    }
+
+    private var symbol: String {
+        switch status {
+        case .recording, .remoteRecording: "record.circle"
+        case .paused, .remotePaused: "pause.circle"
+        case .remoteOffline: "exclamationmark.circle"
+        }
+    }
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            HStack(spacing: 6) {
+                Image(systemName: symbol).foregroundStyle(color)
+                Text(RideFormat.duration(context.date.timeIntervalSince(startedAt)))
+                Text("·").foregroundStyle(.secondary)
+                Text(RideFormat.distance(distance))
+            }
+            .font(.subheadline.weight(.semibold))
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .frame(minHeight: 44)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(title))
+            .accessibilityValue("\(RideFormat.spokenDuration(context.date.timeIntervalSince(startedAt))), \(RideFormat.distance(distance))")
+            .accessibilityIdentifier("rideAccessoryStatus")
+        }
+    }
+}
+#endif

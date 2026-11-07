@@ -75,6 +75,13 @@ final class RideFlowTests: XCTestCase {
         start.tap()
         let end = app.buttons["End ride"]
         XCTAssertTrue(end.waitForExistence(timeout: 5))
+        let details = app.buttons["rideAccessoryDetails"]
+        XCTAssertTrue(details.waitForExistence(timeout: 5))
+        XCTAssertTrue(details.label.contains("Recording"), details.label)
+        openTab("History", in: app)
+        details.tap()
+        XCTAssertTrue(app.navigationBars["ScooterLog"].waitForExistence(timeout: 5),
+                      "The accessible status button returns to the Ride tab")
         capture("Active ride dashboard")
         app.terminate()
         app.launch()
