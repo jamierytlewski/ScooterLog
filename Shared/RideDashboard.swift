@@ -75,9 +75,9 @@ struct RideDashboard: View {
             }
         }
         .tabViewBottomAccessory(isEnabled: rideBarHiders.isEmpty) { rideAccessory }
-        .environment(\.setRideBarHidden) { reason, hidden in
+        .environment(\.setRideBarHidden, SetRideBarHiddenAction { reason, hidden in
             if hidden { rideBarHiders.insert(reason) } else { rideBarHiders.remove(reason) }
-        }
+        })
         .tint(theme.color)
         .modifier(endRideConfirmation)
         #else
@@ -1172,9 +1172,17 @@ private struct EndRideConfirmation: ViewModifier {
     }
 }
 
+struct SetRideBarHiddenAction {
+    let action: (_ reason: String, _ hidden: Bool) -> Void
+
+    func callAsFunction(_ reason: String, _ hidden: Bool) {
+        action(reason, hidden)
+    }
+}
+
 extension EnvironmentValues {
     /// Lets a focused screen hide the iPhone tab bar and its Start/End accessory.
-    @Entry var setRideBarHidden: (_ reason: String, _ hidden: Bool) -> Void = { _, _ in }
+    @Entry var setRideBarHidden = SetRideBarHiddenAction { _, _ in }
 }
 
 extension View {
