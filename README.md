@@ -56,6 +56,8 @@ exposes its reachable commit history.
 
 Watch colors have explicit watchOS variants: dark panels, bright theme accents, and readable secondary text, independent of iPhone Light Mode. Watch tool rows use rounded backgrounds and compact theme-colored icon tiles.
 
+Home Screen widgets also adapt their text to Light and Dark Mode. Distance widgets keep the value and its unit together on one line, with ride counts or other details underneath.
+
 Use the **palette button** at the top right of the iPhone dashboard, or **Settings > Color scheme**, to choose **Tron blue** (cyan) or **Ares red**. Both use midnight-blue surfaces in Dark Mode and pale blue-gray surfaces with darker, legible accents in Light Mode. Appearance follows the device; neither theme forces Dark Mode. The color assets also include Increase Contrast variants. The choice is saved locally on each device; on watch, use **Appearance > Color scheme**. Phone and watch choices are independent.
 
 The selected accent carries through controls, ride metrics, route lines, and the iPhone's Live Activity. Changing the palette also updates an existing local ride's Live Activity. Activity content includes an optional theme value so older activity snapshots continue to decode using blue. Compact Live Activities use the iOS 27 limited-width environment to hide the distance when only a symbol fits.

@@ -99,6 +99,7 @@ private struct BigStat: View {
     let value: String
     let caption: String
     let accent: Color
+    var unit: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -106,12 +107,12 @@ private struct BigStat: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(accent)
             Spacer(minLength: 0)
-            Text(value)
+            Text("\(value)\(Text(unit.map { " \($0)" } ?? "").font(.system(size: 20, weight: .semibold, design: .rounded)))")
                 .font(.system(size: 44, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .minimumScaleFactor(0.5)
                 .lineLimit(1)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             Text(caption)
                 .font(.caption)
                 .foregroundStyle(RideTheme.secondaryText)
@@ -180,12 +181,12 @@ struct WeeklyMilesView: View {
         case _ where family.isMedium:
             HStack(spacing: 16) {
                 BigStat(title: "This week", systemImage: "scooter", value: value,
-                        caption: "\(unit) · \(snapshot.ridesText)", accent: snapshot.accent)
+                        caption: snapshot.ridesText, accent: snapshot.accent, unit: unit)
                 DailyMilesChart(snapshot: snapshot)
             }
         default:
             BigStat(title: "This week", systemImage: "scooter", value: value,
-                    caption: "\(unit) · \(snapshot.ridesText)", accent: snapshot.accent)
+                    caption: snapshot.ridesText, accent: snapshot.accent, unit: unit)
         }
     }
 }
@@ -208,7 +209,7 @@ private struct DailyMilesChart: View {
                         .frame(maxHeight: 70, alignment: .bottom)
                     Text(calendar.veryShortWeekdaySymbols[calendar.component(.weekday, from: date) - 1])
                         .font(.caption2)
-                        .foregroundStyle(day == today ? .white : RideTheme.secondaryText)
+                        .foregroundStyle(day == today ? Color.primary : RideTheme.secondaryText)
                 }
             }
         }
@@ -272,7 +273,7 @@ struct WeeklyGoalView: View {
                     VStack(spacing: 0) {
                         Text(snapshot.weekText)
                             .font(.title2.weight(.bold)).monospacedDigit()
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         Text("of \(snapshot.goalText) \(snapshot.unit.distanceSymbol)").font(.caption2).foregroundStyle(RideTheme.secondaryText)
                     }
                 }
@@ -356,8 +357,9 @@ struct LastRideView: View {
                             caption: ride.isTrimmedEstimate == true ? "Estimated distance" : "\(duration(ride.duration)) · \(speed)")
         case _ where family.isMedium:
             HStack(spacing: 16) {
-                BigStat(title: "Last ride", systemImage: "scooter", value: distance, caption: "\(distanceCaption) · \(when)",
-                        accent: snapshot.accent)
+                BigStat(title: "Last ride", systemImage: "scooter", value: distance,
+                        caption: ride.isTrimmedEstimate == true ? "Estimated · \(when)" : when,
+                        accent: snapshot.accent, unit: unit)
                 VStack(alignment: .leading, spacing: 10) {
                     detail("Time", duration(ride.duration))
                     detail("Moving avg", speed)
@@ -367,14 +369,15 @@ struct LastRideView: View {
             }
         default:
             BigStat(title: "Last ride", systemImage: "scooter", value: distance,
-                    caption: "\(distanceCaption) · \(duration(ride.duration)) · \(when)", accent: snapshot.accent)
+                    caption: "\(ride.isTrimmedEstimate == true ? "Estimated · " : "")\(duration(ride.duration)) · \(when)",
+                    accent: snapshot.accent, unit: unit)
         }
     }
 
     private func detail(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(title).font(.caption2).foregroundStyle(RideTheme.secondaryText)
-            Text(value).font(.headline).monospacedDigit().foregroundStyle(.white)
+            Text(value).font(.headline).monospacedDigit().foregroundStyle(.primary)
         }
     }
 }
@@ -452,12 +455,12 @@ struct RideWeatherWidgetView: View {
                         .font(.title2)
                         .foregroundStyle(Self.color(weather.verdict))
                     Spacer()
-                    Text(temperature).font(.title3.weight(.semibold)).foregroundStyle(.white)
+                    Text(temperature).font(.title3.weight(.semibold)).foregroundStyle(.primary)
                 }
                 Spacer(minLength: 0)
                 Text(weather.verdict.title)
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.8)
                 Text(weather.displaySummary)
