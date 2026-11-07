@@ -1083,8 +1083,6 @@ struct RideDetail: View {
     @State private var showSpeedMap = true
     @State private var visibleMapCamera: MapCamera?
     #if os(iOS)
-    @State private var shareFiles: ActivityExportFiles?
-    @State private var shareDirectory: URL?
     #endif
     @Environment(\.dismiss) private var dismiss
 
@@ -1173,17 +1171,13 @@ struct RideDetail: View {
                     Label("Trim ride", systemImage: "scissors")
                 }
                 .disabled(ride.samples.count < 3)
-                ShareLink(item: shareSummary) {
-                    Label("Share ride stats", systemImage: "square.and.arrow.up")
+                NavigationLink {
+                    RideShareView(ride: ride)
+                } label: {
+                    Label("Share ride scorecard", systemImage: "square.and.arrow.up")
                 }
                 .accessibilityIdentifier("shareRideStats")
-                Button {
-                    sharePrivateRoute()
-                } label: {
-                    Label("Share route without endpoints", systemImage: "map")
-                }
-                .accessibilityIdentifier("sharePrivateRoute")
-                Text("Stats contain no route or date. Route sharing removes points within 200 meters of the start and end, and omits times. Remaining roads can still reveal where you rode.")
+                Text("Preview an arcade-style image with stats and a route map. Choose protected endpoints, the whole route, or stats only before sharing.")
                     .font(.footnote).foregroundStyle(RideTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             } header: {
@@ -1209,12 +1203,6 @@ struct RideDetail: View {
                     .accessibilityIdentifier("deleteRide")
             }
         }
-        .sheet(item: $shareFiles, onDismiss: removeSharedRoute) { files in
-            ActivityExportShareSheet(urls: files.urls) { error in
-                if let error { controller.report("Could not share route: \(error.localizedDescription)") }
-                shareFiles = nil
-            }
-        }
         #endif
         // Leave the screen once the ride is gone, whether deleted here or from the companion.
         .onChange(of: controller.archive.isDeleted(ride.id)) { _, deleted in
@@ -1226,42 +1214,6 @@ struct RideDetail: View {
         do { try controller.deleteRides([ride.id]) }
         catch { controller.report(error.localizedDescription) }
     }
-
-    #if os(iOS)
-    private var shareSummary: String {
-        let distance = ride.isTrimmedEstimate == true ? "Estimated distance" : "Distance"
-        var summary = "ScooterLog ride\n\(distance): \(RideFormat.distance(ride.distance))\nElapsed: \(RideFormat.duration(ride.elapsed(at: .now)))"
-        if ride.isTrimmedEstimate != true {
-            summary += "\nMoving: \(RideFormat.duration(ride.movingDuration))\nMoving average: \(RideFormat.speed(ride.movingAverageSpeed))"
-        }
-        return summary
-    }
-
-    private func sharePrivateRoute() {
-        do {
-            let route = try RideExport.privateRouteGPX(ride)
-            let directory = FileManager.default.temporaryDirectory
-                .appendingPathComponent("ScooterLog-share-\(UUID().uuidString)", isDirectory: true)
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            shareDirectory = directory
-            let url = directory.appendingPathComponent("ScooterLog-shared-route.gpx")
-            try route.write(to: url, atomically: true, encoding: .utf8)
-            shareFiles = ActivityExportFiles(urls: [url])
-        } catch RideExport.PrivateRouteError.insufficientRoute {
-            controller.report("This route is too short to share after removing its endpoints.")
-        } catch {
-            controller.report("Could not prepare route sharing: \(error.localizedDescription)")
-            removeSharedRoute()
-        }
-    }
-
-    private func removeSharedRoute() {
-        guard let directory = shareDirectory else { return }
-        shareDirectory = nil
-        do { try FileManager.default.removeItem(at: directory) }
-        catch { controller.report("Could not remove temporary shared route: \(error.localizedDescription)") }
-    }
-    #endif
 
     private var segments: [[LocationSample]] {
         ride.routeSegments.filter { $0.count > 1 }

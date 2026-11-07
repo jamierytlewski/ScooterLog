@@ -56,12 +56,18 @@ public enum RideExport {
         case insufficientRoute
     }
 
-    /// A route-only GPX with no timestamps, owner, ride identifier, or original endpoints.
-    /// Every retained point is outside the radius of both endpoints, including revisits.
-    public static func privateRouteGPX(_ ride: Ride, privacyRadius: Double = 200) throws -> String {
-        guard privacyRadius.isFinite, privacyRadius > 0 else { throw PrivateRouteError.invalidPrivacyRadius }
+    /// Shared geometry for image and GPX exports. A nil radius explicitly includes the whole route.
+    public static func sharedRouteSegments(_ ride: Ride, privacyRadius: Double? = 200) throws -> [[LocationSample]] {
+        if let privacyRadius, !privacyRadius.isFinite || privacyRadius <= 0 {
+            throw PrivateRouteError.invalidPrivacyRadius
+        }
         guard ride.endedAt != nil, let first = ride.samples.first, let last = ride.samples.last,
               ride.samples.count >= 2 else { throw PrivateRouteError.insufficientRoute }
+        guard let privacyRadius else {
+            let segments = ride.routeSegments.filter { $0.count > 1 }
+            guard !segments.isEmpty else { throw PrivateRouteError.insufficientRoute }
+            return segments
+        }
         var segments: [[LocationSample]] = []
         var current: [LocationSample] = []
         func outside(_ sample: LocationSample) -> Bool {
@@ -88,6 +94,13 @@ public enum RideExport {
         }
         if current.count > 1 { segments.append(current) }
         guard !segments.isEmpty else { throw PrivateRouteError.insufficientRoute }
+        return segments
+    }
+
+    /// A route-only GPX with no timestamps, owner, ride identifier, or original endpoints.
+    /// Every retained point is outside the radius of both endpoints, including revisits.
+    public static func privateRouteGPX(_ ride: Ride, privacyRadius: Double = 200) throws -> String {
+        let segments = try sharedRouteSegments(ride, privacyRadius: privacyRadius)
         var lines = [
             #"<?xml version="1.0" encoding="UTF-8"?>"#,
             #"<gpx version="1.1" creator="ScooterLog" xmlns="http://www.topografix.com/GPX/1/1">"#,
