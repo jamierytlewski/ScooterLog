@@ -1,4 +1,5 @@
 import ActivityKit
+import AppIntents
 import ScooterCore
 import SwiftUI
 import WidgetKit
@@ -34,7 +35,16 @@ struct ScooterRideWidget: Widget {
                     HStack {
                         RideElapsed(context: context)
                         Spacer()
-                        Text(context.isStale && context.state.endedAt == nil ? "GPS stale" : context.attributes.owner)
+                        if context.state.endedAt == nil && !context.state.isPaused {
+                            Button(intent: PauseRideIntent()) {
+                                Label("Pause", systemImage: "pause.fill")
+                                    .font(.caption.weight(.semibold))
+                            }
+                            .buttonStyle(.bordered)
+                            .tint((context.state.theme ?? .tronBlue).color)
+                        } else {
+                            Text(context.state.isPaused ? "Paused" : (context.isStale && context.state.endedAt == nil ? "GPS stale" : context.attributes.owner))
+                        }
                     }
                 }
             } compactLeading: {
@@ -54,9 +64,9 @@ private struct RideActivitySymbol: View {
     let context: ActivityViewContext<RideActivityAttributes>
 
     var body: some View {
-        Image(systemName: context.isStale && context.state.endedAt == nil ? "location.slash" : "scooter")
+        Image(systemName: context.state.isPaused ? "pause.circle.fill" : (context.isStale && context.state.endedAt == nil ? "location.slash" : "scooter"))
             .foregroundStyle((context.state.theme ?? .tronBlue).color)
-            .accessibilityLabel(context.isStale && context.state.endedAt == nil ? "Scooter ride, GPS stale" : "Scooter ride")
+            .accessibilityLabel(context.state.isPaused ? "Scooter ride paused" : (context.isStale && context.state.endedAt == nil ? "Scooter ride, GPS stale" : "Scooter ride"))
     }
 }
 
@@ -87,6 +97,8 @@ private struct RideElapsed: View {
     private var elapsedText: Text {
         if let end = context.state.endedAt {
             return Text(Duration.seconds(end.timeIntervalSince(context.attributes.startedAt)), format: .time(pattern: .hourMinuteSecond))
+        } else if context.state.isPaused {
+            return Text(timerInterval: context.attributes.startedAt...Date.distantFuture, pauseTime: context.state.updatedAt, countsDown: false)
         } else {
             return Text(timerInterval: context.attributes.startedAt...Date.distantFuture, countsDown: false)
         }
@@ -118,8 +130,19 @@ private struct RideActivityView: View {
                         Text(RideUnits.distance(context.state.distance))
                             .accessibilityLabel("Distance \(RideUnits.distance(context.state.distance))")
                     }.font(.title2.monospacedDigit())
-                    Text(isStale ? "Open app for current metrics" : "Stopped estimate: \(Int(context.state.stopped)) sec")
-                        .font(.caption)
+                    HStack {
+                        Text(context.state.isPaused ? "Recording paused" : (isStale ? "Open app for current metrics" : "Stopped estimate: \(Int(context.state.stopped)) sec"))
+                            .font(.caption)
+                        Spacer()
+                        if context.state.endedAt == nil && !context.state.isPaused {
+                            Button(intent: PauseRideIntent()) {
+                                Label("Pause", systemImage: "pause.fill")
+                                    .font(.caption.weight(.semibold))
+                            }
+                            .buttonStyle(.bordered)
+                            .tint((context.state.theme ?? .tronBlue).color)
+                        }
+                    }
                 }
                 .padding()
             }
@@ -139,6 +162,8 @@ private struct RideActivityView: View {
                 Spacer(minLength: 0)
                 if context.state.endedAt != nil {
                     Image(systemName: "checkmark.circle").accessibilityLabel("Saved")
+                } else if context.state.isPaused {
+                    Image(systemName: "pause.circle").accessibilityLabel("Paused")
                 }
             }
             .font(.headline.monospacedDigit())
@@ -155,8 +180,8 @@ private struct RideActivityView: View {
     private var isStale: Bool { context.state.endedAt == nil && context.isStale }
 
     private var status: some View {
-        Label(context.state.endedAt != nil ? "Saved" : isStale ? "GPS stale" : "Ride active",
-              systemImage: context.state.endedAt != nil ? "checkmark.circle" : isStale ? "location.slash" : "record.circle")
+        Label(context.state.endedAt != nil ? "Saved" : context.state.isPaused ? "Paused" : isStale ? "GPS stale" : "Ride active",
+              systemImage: context.state.endedAt != nil ? "checkmark.circle" : context.state.isPaused ? "pause.circle" : isStale ? "location.slash" : "record.circle")
     }
 }
 
@@ -165,6 +190,7 @@ private struct RideActivityView: View {
     ScooterRideWidget()
 } contentStates: {
     RideActivityAttributes.ContentState(distance: 12_874, speed: 6.2, stopped: 95, updatedAt: .now, endedAt: nil, theme: nil)
+    RideActivityAttributes.ContentState(distance: 12_874, speed: nil, stopped: 95, updatedAt: .now, endedAt: nil, theme: nil, isPaused: true)
     RideActivityAttributes.ContentState(distance: 12_874, speed: nil, stopped: 95, updatedAt: .now, endedAt: .now, theme: nil)
 }
 #endif

@@ -11,6 +11,8 @@ struct ScooterLogApp: App {
 
     init() {
         StartRideControlIntent.handler = { HomeScreenActions.shared.startRequested = true }
+        PauseRideIntent.handler = { RideController.shared.pause() }
+        ScooterShortcuts.updateAppShortcutParameters()
     }
 
     var body: some Scene {
