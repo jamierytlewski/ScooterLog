@@ -1,0 +1,93 @@
+name: "🐛 Bug Report"
+description: File a bug report to help track down an issue in ScooterLog
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting an issue!
+        
+        > **Privacy Warning:** ScooterLog handles sensitive location and health metrics. **Do not include real home or work coordinates, raw GPS tracks, HealthKit samples, or personal credentials in public issues.** Use synthetic data and redact screenshots. For sensitive security/privacy issues, email [privacy@j4m13.dev](mailto:privacy@j4m13.dev).
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear, concise summary of the bug.
+      placeholder: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce this? Step-by-step instructions help enormously.
+      placeholder: |
+        1. Start a ride on iPhone
+        2. Lock phone and ride for 5 minutes
+        3. Open watch app...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: recording-owner
+    attributes:
+      label: Ride recording device
+      description: Which device initiated / owned the recording session?
+      options:
+        - "iPhone"
+        - "Apple Watch"
+        - "Not ride-recording related (e.g., Settings, History review, route planning)"
+        - "Unsure / Both"
+    validations:
+      required: true
+  - type: dropdown
+    id: companion-connection
+    attributes:
+      label: Device connection state
+      description: What was the connectivity status between your iPhone and Apple Watch?
+      options:
+        - "Connected and in range"
+        - "Standalone / Out of range (iPhone left behind or in airplane mode)"
+        - "No Apple Watch paired / iPhone only"
+        - "Unsure"
+    validations:
+      required: false
+  - type: input
+    id: app-version
+    attributes:
+      label: ScooterLog version & build
+      description: Found in iPhone Settings > ScooterLog or the about screen.
+      placeholder: "e.g., 1.0.0 (12)"
+    validations:
+      required: true
+  - type: input
+    id: hardware-os
+    attributes:
+      label: Device models & OS versions
+      description: Please specify the device model and OS version.
+      placeholder: "e.g., iPhone 16 Pro (iOS 18.2) and/or Apple Watch Ultra 2 (watchOS 11.2)"
+    validations:
+      required: true
+  - type: textarea
+    id: logs-screenshots
+    attributes:
+      label: Screenshots or redacted diagnostics
+      description: Drag and drop screenshots or crash details here. Please redact any maps showing home/work coordinates or personal identifiers.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I confirmed that no private coordinates (home/work), health data, or personal info are included.
+          required: true
+        - label: I searched existing issues to verify this is not a duplicate.
+          required: false

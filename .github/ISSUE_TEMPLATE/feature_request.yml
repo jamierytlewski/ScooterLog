@@ -1,0 +1,59 @@
+name: "💡 Feature Request"
+description: Suggest an idea or enhancement for ScooterLog
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping make ScooterLog better!
+        ScooterLog is a native, local-first ride logger designed for safety, privacy, and minimal battery drain.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem or limitation?
+      description: A clear and concise description of the limitation or need.
+      placeholder: "I find it difficult to... / When riding in heavy rain, I wish..."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe your proposed feature or improvement
+      description: What would you like ScooterLog to do? How should it behave?
+      placeholder: "Add an option to... / Introduce a new metric for..."
+    validations:
+      required: true
+  - type: dropdown
+    id: platform-scope
+    attributes:
+      label: Relevant area(s)
+      description: Select which part of the ScooterLog experience this applies to.
+      multiple: true
+      options:
+        - "iPhone App (Dashboard, History, Settings)"
+        - "Apple Watch App (Dashboard, Complications, Standalone Recording)"
+        - "Live Activity / Dynamic Island"
+        - "Widgets (Home Screen / Lock Screen / Smart Stack)"
+        - "Siri & Shortcuts Integration"
+        - "Turn-by-turn Navigation & Route Guidance"
+        - "Trim & Share / Social Scorecards"
+        - "Export Formats (GPX, JSON)"
+        - "Weather & Safety Alerts"
+        - "Other"
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or workarounds considered
+      description: Have you considered any alternative solutions, third-party tools, or workarounds?
+    validations:
+      required: false
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context or mockups
+      description: Add any sketches, screenshots, or extra context that might help explain your idea.
+    validations:
+      required: false

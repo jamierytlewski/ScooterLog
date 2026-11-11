@@ -9,13 +9,17 @@ clarity, and evidence, not by whether AI tools were used.
 ## Discuss and report
 
 Use [GitHub Issues](https://github.com/jamierytlewski/ScooterLog/issues) for
-non-sensitive bugs and proposals. For a substantial feature or dependency,
-discuss the approach before implementing it.
+non-sensitive bugs and feature proposals:
 
-For bugs, include the app/build version, iOS or watchOS version, device model,
-whether the ride was owned by the phone or watch, reproduction steps, and
-expected versus actual behavior. Say whether the devices were connected,
-whether the app was backgrounded, and what permissions were enabled when relevant.
+- **Bug Reports**: Choose the **🐛 Bug Report** form. It guides you through
+  providing required context (app/build version, iOS and watchOS versions, device
+  models, recording owner device, companion connectivity status, and reproduction steps).
+- **Feature Requests**: Choose the **💡 Feature Request** form to propose new
+  functionality, UI ideas, or integration enhancements across the iPhone app,
+  Apple Watch app, Live Activities, widgets, or Siri Shortcuts.
+- **Open Discussions**: Use [GitHub Discussions](https://github.com/jamierytlewski/ScooterLog/discussions)
+  for general Q&A, setup questions, or open-ended brainstorming. For substantial
+  architectural changes or new dependencies, discuss the approach before implementing it.
 
 **Issues and pull requests are public.** Do not attach real ride exports, home or
 work coordinates, Health data, private logs, signing files, tokens, or screenshots
@@ -51,10 +55,11 @@ for behavior changes. GPS accuracy, background recording, WatchConnectivity,
 HealthKit sensors, and production CloudKit need real-device checks; distinguish
 those from simulator results. Documentation-only changes do not need an app build.
 
-In your pull request, explain the problem, the change, and what you actually
-verified. Include redacted before/after screenshots for visible changes.
-Disclose meaningful limitations, including untested device behavior. Review and
-understand AI-assisted changes before submitting them.
+In your pull request, complete the checklist provided in the pull request
+template. Explain the problem, the change, and what you actually verified
+(simulator vs. real devices). Include redacted before/after screenshots for
+visible changes. Disclose meaningful limitations, including untested device
+behavior. Review and understand AI-assisted changes before submitting them.
 
 ## License and provenance
 

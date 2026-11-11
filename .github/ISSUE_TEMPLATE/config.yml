@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "🔒 Security & Sensitive Privacy Reports"
+    url: "mailto:privacy@j4m13.dev"
+    about: "Report security vulnerabilities or sensitive privacy concerns confidentially via email."
+  - name: "💬 Community Discussions & Questions"
+    url: "https://github.com/jamierytlewski/ScooterLog/discussions"
+    about: "Ask questions, share riding setups, or have open-ended discussions about ScooterLog."
