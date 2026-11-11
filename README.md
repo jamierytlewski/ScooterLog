@@ -9,8 +9,10 @@ The phone target is **iPhone-only**; there is no dedicated iPad interface. The A
 ## License, contributions, and privacy
 
 ScooterLog is available under the [MIT license](LICENSE). See
-[CONTRIBUTING.md](CONTRIBUTING.md) for bug reports, focused pull requests,
-AI-assisted contributions, and protecting private ride data in public discussions.
+[CONTRIBUTING.md](CONTRIBUTING.md) for submitting bug reports and feature requests
+via [GitHub Issues](https://github.com/jamierytlewski/ScooterLog/issues),
+opening focused pull requests, AI-assisted contributions, and protecting private
+ride data in public discussions.
 
 The static privacy/support site is in `docs/`, intended for
 `https://scooterlog.j4m13.dev/`. Both apps provide **Privacy & support** links
@@ -86,11 +88,13 @@ No signing certificates, accounts, API tokens, paid resources, or deployment are
 
 The iPhone and watch share the original 1024 px neon scooter icon in `Shared/AppIcon.xcassets/AppIcon.appiconset`. The iPhone also bundles `AppIconAres` as an alternate icon via `ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES`. Matching in-app illustrations live in `Shared/Assets.xcassets`. After replacing the original icon, run `swift Tools/GenerateThemeIcon.swift` from the repository root on macOS to regenerate the red icon and both in-app illustrations. No project regeneration is needed for image changes.
 
-## Siri phrase setup
+## Siri and Shortcuts setup
 
 After launching the app and allowing location, try **"Hey Siri, start a ride in ScooterLog"**. Native actions also appear in Shortcuts under ScooterLog.
 
-For the exact phrase **"Hey Siri, I'm riding my scooter"**, create a personal shortcut named **I'm riding my scooter**, add ScooterLog's **Start scooter ride** action, and run it once. A third-party app cannot reserve that global phrase by itself. Unlocking/opening the app may be necessary, especially on first use; a failed/denied start throws an error rather than claiming recording began.
+To install a preconfigured shortcut directly on your iPhone and Apple Watch, download [**Start A Scooter Ride**](https://www.icloud.com/shortcuts/5d76569857bc4ecfb25fe953b485ecb0) from iCloud.
+
+For the exact phrase **"Hey Siri, I'm riding my scooter"**, create a personal shortcut named **I'm riding my scooter** (or customize the shortcut above), add ScooterLog's **Start scooter ride** action, and run it once. A third-party app cannot reserve that global phrase by itself. Unlocking/opening the app may be necessary, especially on first use; a failed/denied start throws an error rather than claiming recording began.
 
 End with **"Hey Siri, end my ride in ScooterLog"** on the recording owner. End intent deliberately does not claim to stop an unreachable companion. The app's connected End button can request that operation and waits for acknowledgement.
 
