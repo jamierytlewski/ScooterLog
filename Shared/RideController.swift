@@ -125,6 +125,9 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
                 #endif
             } catch { report("Could not resume recording: \(error.localizedDescription). Resume or end the saved ride.") }
         }
+        #if os(iOS)
+        PauseRideIntent.handler = { [weak self] in self?.pause() }
+        #endif
         if WCSession.isSupported() {
             let session = WCSession.default
             connectivity = session
@@ -202,6 +205,19 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
         #endif
     }
 
+    func pause() {
+        guard recording, archive.active != nil else { return }
+        stopUpdates(preserveCheckpoint: true)
+        locationStatus = "Recording paused."
+        logger.notice("Paused location recording on the owning device.")
+        broadcast()
+        #if os(iOS)
+        if let ride = archive.active {
+            liveActivity.update(ride, isPaused: true)
+        }
+        #endif
+    }
+
     func end() throws {
         guard archive.active != nil else { throw RideFailure.noRide }
         var next = archive
@@ -263,7 +279,7 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
 
     func refreshLiveActivityAppearance() {
         #if os(iOS)
-        if let ride = archive.active { liveActivity.update(ride) }
+        if let ride = archive.active { liveActivity.update(ride, isPaused: !recording) }
         #endif
     }
 
@@ -441,7 +457,7 @@ final class RideController: NSObject, ObservableObject, @preconcurrency CLLocati
             archive.active = ride
             broadcast()
             #if os(iOS)
-            liveActivity.update(ride)
+            liveActivity.update(ride, isPaused: !recording)
             #endif
         } catch {
             stopUpdates()
@@ -716,7 +732,7 @@ extension RideController: WCSessionDelegate {
                     // A delayed companion snapshot cannot confirm stationarity beyond its send time.
                     ride.finishStationary(at: snapshot.sentAt)
                     liveActivity.start(ride, onError: report)
-                    liveActivity.update(ride)
+                    liveActivity.update(ride, isPaused: !snapshot.recording)
                 } else { liveActivity.endAll() }
             }
             #endif

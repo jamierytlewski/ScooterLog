@@ -23,7 +23,6 @@ struct StartRideIntent: StartRideProtocol {
 struct EndRideIntent: AppIntent {
     static let title: LocalizedStringResource = "End scooter ride"
     static let description = IntentDescription("End and save the ride owned by this device. A companion-owned ride must be ended on its owner or through the connected app controls.")
-    static var supportedModes: IntentModes { .foreground(.immediate) }
     static var allowedExecutionTargets: IntentExecutionTargets { .main }
 
     @MainActor
@@ -34,6 +33,8 @@ struct EndRideIntent: AppIntent {
 }
 
 struct ScooterShortcuts: AppShortcutsProvider {
+    static var shortcutTileColor: ShortcutTileColor { .teal }
+
     static var appShortcuts: [AppShortcut] {
         AppShortcut(intent: StartRideIntent(),
                     phrases: ["Start a ride in \(.applicationName)", "I'm riding my scooter with \(.applicationName)"],

@@ -11,6 +11,7 @@ struct ScooterWatchApp: App {
             guard controller.displayedRide == nil else { return }
             controller.perform { try controller.start() }
         }
+        ScooterShortcuts.updateAppShortcutParameters()
     }
 
     var body: some Scene {
